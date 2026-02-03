@@ -138,8 +138,8 @@ def create(
 
     # Validate price oracle
     p: uint256 = (staticcall _price_oracle.price())
-    assert p > 0
-    assert extcall _price_oracle.price_w() == p
+    assert p > 0  # dev: price oracle returned zero
+    assert extcall _price_oracle.price_w() == p  # dev: price oracle price() and price_w() mismatch
 
     vault: IVault = IVault(create_from_blueprint(blueprint_registry.get("VLT")))
     amm: IAMM = IAMM(
