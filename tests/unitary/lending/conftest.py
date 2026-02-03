@@ -7,6 +7,14 @@ def market_type():
     return "lending"
 
 
+@pytest.fixture(scope="module", params=[5 * 10**17, 10**18])
+def admin_percentage(request, controller, admin):
+    """Parametrize admin_percentage for lending markets (50% and 100%)."""
+    with boa.env.prank(admin):
+        controller.set_admin_percentage(request.param)
+    return request.param
+
+
 @pytest.fixture(scope="module")
 def make_debt(vault, controller, amm, borrowed_token):
     borrowed_balance = controller.available_balance()
