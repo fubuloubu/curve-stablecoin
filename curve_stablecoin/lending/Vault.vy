@@ -158,9 +158,7 @@ def lend_apr() -> uint256:
     debt: uint256 = staticcall self._controller.total_debt()
     if debt == 0:
         return 0
-
-    # We don't use self._total_assets() to avoid calling self._controller.total_debt() twice
-    return staticcall self._amm.rate() * (365 * 86400) * debt // (staticcall ILendController(self._controller.address).available_balance() + debt)
+    return staticcall self._amm.rate() * (365 * 86400) * debt // self._total_assets()
 
 
 @external
