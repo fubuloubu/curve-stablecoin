@@ -2,6 +2,7 @@
 E2E test verifying that lenders earn yield matching the advertised lend_apr,
 accounting for admin fees, after various market activities (borrows, repays, etc).
 """
+
 import boa
 import pytest
 
@@ -108,9 +109,9 @@ def test_lender_yield_matches_apr(
     tolerance = expected_yield_approx // 2
 
     assert actual_yield > 0, "Lender should have earned some yield"
-    assert (
-        abs(actual_yield - expected_yield_approx) < tolerance
-    ), f"Actual yield {actual_yield} differs too much from expected {expected_yield_approx}"
+    assert abs(actual_yield - expected_yield_approx) < tolerance, (
+        f"Actual yield {actual_yield} differs too much from expected {expected_yield_approx}"
+    )
 
 
 def test_lend_apr_zero_with_no_debt(vault, controller):
