@@ -19,7 +19,8 @@ def test_default_behavior(paused_factory, admin):
     assert not paused_factory.paused()
 
 
-def test_unauthorized(paused_factory, alice):
+def test_unauthorized(paused_factory):
+    non_owner = boa.env.generate_address("non_owner")
     with boa.reverts("ownable: caller is not the owner"):
-        with boa.env.prank(alice):
+        with boa.env.prank(non_owner):
             paused_factory.unpause()
