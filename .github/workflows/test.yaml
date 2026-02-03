@@ -4,6 +4,7 @@ on: [push]
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  EXPLORER_TOKEN: ${{ secrets.EXPLORER_TOKEN }}
   HYPOTHESIS_PROFILE: no-shrink
 
 jobs:
@@ -56,6 +57,8 @@ jobs:
           - folder: "tests/lending"
             runs-on: "ubuntu-latest"
           - folder: "tests/stableborrow --ignore=tests/stableborrow/stabilize"
+            runs-on: "ubuntu-latest"
+          - folder: "tests/forked/mint_factory_new_implementations"
             runs-on: "ubuntu-latest"
     steps:
       - name: Checkout repo
