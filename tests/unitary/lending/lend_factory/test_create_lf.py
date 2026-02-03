@@ -24,7 +24,9 @@ def price_w() -> uint256:
 """
 
 
-def _deploy_mpolicy(lending_monetary_policy, borrowed_token, min_borrow_rate, max_borrow_rate):
+def _deploy_mpolicy(
+    lending_monetary_policy, borrowed_token, min_borrow_rate, max_borrow_rate
+):
     return lending_monetary_policy.deploy(
         borrowed_token.address,
         min_borrow_rate,
