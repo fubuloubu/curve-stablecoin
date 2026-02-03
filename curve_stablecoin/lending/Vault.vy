@@ -153,12 +153,15 @@ def borrow_apr() -> uint256:
 @nonreentrant
 def lend_apr() -> uint256:
     """
-    @notice Lending APR (annualized and 1e18-based)
+    @notice Lending APR (annualized and 1e18-based), net of admin fees
     """
     debt: uint256 = staticcall self._controller.total_debt()
     if debt == 0:
         return 0
-    return staticcall self._amm.rate() * (365 * 86400) * debt // self._total_assets()
+
+    gross_apr: uint256 = staticcall self._amm.rate() * (365 * 86400) * debt // self._total_assets()
+    admin_pct: uint256 = staticcall ILendController(self._controller.address).admin_percentage()
+    return gross_apr * (c.WAD - admin_pct) // c.WAD
 
 
 @external
