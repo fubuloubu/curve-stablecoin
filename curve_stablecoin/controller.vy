@@ -1496,7 +1496,7 @@ def _collect_fees() -> uint256:
     tkn.transfer(BORROWED_TOKEN, staticcall FACTORY.fee_receiver(), pending_admin_fees)
 
     self._save_rate()
-    log IController.CollectFees(amount=pending_admin_fees, new_debt=loan.initial_debt)
+    log IController.CollectFees(amount=pending_admin_fees)
 
     return pending_admin_fees
 
