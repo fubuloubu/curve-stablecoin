@@ -52,3 +52,9 @@ def repaid() -> uint256:
 @view
 def collected() -> uint256:
     ...
+
+
+@external
+@view
+def admin_percentage() -> uint256:
+    ...
