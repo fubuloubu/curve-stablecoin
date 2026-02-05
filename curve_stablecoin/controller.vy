@@ -1488,7 +1488,7 @@ def collect_fees() -> uint256:
 @internal
 def _collect_fees() -> uint256:
     rate_mul: uint256 = staticcall AMM.get_rate_mul()
-    loan: IController.Loan = self._update_total_debt(0, rate_mul, False)
+    self._update_total_debt(0, rate_mul, False)
 
     pending_admin_fees: uint256 = self.admin_fees
     self.collected += pending_admin_fees
