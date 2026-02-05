@@ -110,6 +110,7 @@ def __init__(
     pausable.__init__()
     ownable._transfer_ownership(_admin)
 
+    assert _fee_receiver != empty(address), "invalid receiver"
     self.default_fee_receiver = _fee_receiver
 
 
