@@ -290,7 +290,6 @@ def previewDeposit(_assets: uint256) -> uint256:
     return self._convert_to_shares(_assets)
 
 
-# TODO Statemind AI INFORMATIONAL-02
 @external
 @nonreentrant
 def deposit(_assets: uint256, _receiver: address = msg.sender) -> uint256:
@@ -304,6 +303,7 @@ def deposit(_assets: uint256, _receiver: address = msg.sender) -> uint256:
     assert total_assets + _assets >= MIN_ASSETS, "Need more assets"
     assert total_assets + _assets <= self.maxSupply, "Supply limit"
     to_mint: uint256 = self._convert_to_shares(_assets, True, total_assets)
+    assert to_mint > 0, "Can't mint 0 shares"
     tkn.transfer_from(self._borrowed_token, msg.sender, controller.address, _assets)
     self.net_deposits += convert(_assets, int256)
     self._mint(_receiver, to_mint)
@@ -336,7 +336,6 @@ def previewMint(_shares: uint256) -> uint256:
     return self._convert_to_assets(_shares, False)
 
 
-# TODO Statemind AI INFORMATIONAL-02
 @external
 @nonreentrant
 def mint(_shares: uint256, _receiver: address = msg.sender) -> uint256:
@@ -345,6 +344,7 @@ def mint(_shares: uint256, _receiver: address = msg.sender) -> uint256:
     @param _shares Number of sharess to mint
     @param _receiver Optional receiver for the shares. If not specified - it's the sender
     """
+    assert _shares > 0, "Can't mint 0 shares"
     controller: IController = self._controller
     total_assets: uint256 = self._total_assets()
     assets: uint256 = self._convert_to_assets(_shares, False, total_assets)
