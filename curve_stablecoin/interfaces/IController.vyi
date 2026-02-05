@@ -70,7 +70,6 @@ event SetExtraHealth:
 
 event CollectFees:
     amount: uint256
-    new_debt: uint256
 
 
 event SetView:
