@@ -92,7 +92,8 @@ exports: (
     core.max_borrowable,
 )
 
-borrow_cap: public(uint256)
+borrow_cap: public(reentrant(uint256))
+available_balance: public(reentrant(uint256))
 VAULT: immutable(IVault)
 
 
@@ -158,50 +159,6 @@ def version() -> String[10]:
 
 
 @external
-@view
-def available_balance() -> uint256:
-    """
-    @notice Amount of borrowed token the vault can use for withdrawals or new loans
-    @dev Used by the vault for its accounting logic to ignore tokens sent directly to the controller.
-    """
-    return self._available_balance()
-
-
-@internal
-@view
-def _available_balance() -> uint256:
-    # This functions provides the balance of tokens in the controller
-    # that can be withdrawn or used for new loans at any time.
-
-    # This is required because a naive measure like balanceOf can easily
-    # be manipulated making it easy to inflate the vault balance.
-
-    # Any amount sent directly to this controller contract is lost forever.
-
-    # We start from the total net deposits in the vault
-    available_balance: int256 = staticcall VAULT.net_deposits()
-
-    # We compute the outstanding amount that has been lent out but not yet repaid
-    outstanding: int256 = convert(core.lent, int256) - convert(core.repaid, int256)
-
-    # We deduce outstanding balance from the available balance
-    available_balance -= outstanding
-
-    # TODO make sure this can NEVER happen through testing
-    assert available_balance >= 0 # dev: sanity check
-
-    # We compute the total admin fees combining fees that have already been
-    # collected and fees that still live in the controller's balance
-    total_admin_fees: uint256 = core.collected + core.admin_fees
-
-    available_balance -= convert(total_admin_fees, int256)
-
-    if available_balance < 0:
-        return 0
-    return convert(available_balance, uint256)
-
-
-@external
 def set_borrow_cap(_borrow_cap: uint256):
     """
     @notice Set the borrow cap for this market
@@ -226,13 +183,37 @@ def set_admin_percentage(_admin_percentage: uint256):
 
 @external
 @reentrant
-def _on_debt_increased(_delta: uint256, _total_debt: uint256):
+def on_borrowed_token_transfer_in(_amount: uint256):
+    """
+    @notice Hook called by
+            1. The controller on repay/liquidate
+            2. The vault on deposit
+    """
+    assert msg.sender == VAULT.address or msg.sender == self # dev: vault or controller only
+    self.available_balance += _amount
+
+
+@external
+@reentrant
+def on_borrowed_token_transfer_out(_amount: uint256):
+    """
+    @notice Hook called by
+            1. The controller on create/borrow/collect_fees
+            2. The vault on withdraw
+    """
+    assert msg.sender == VAULT.address or msg.sender == self # dev: vault or controller only
+    assert _amount <= self.available_balance, "Available balance exceeded"
+    self.available_balance -= _amount
+
+
+@external
+@reentrant
+def _on_debt_increased(_total_debt: uint256):
     """
     @notice Hook called when debt is increased
     """
-    assert msg.sender == self # dev: virtual method protection
+    assert msg.sender == self # dev: virtual method protection (controller only)
     assert _total_debt <= self.borrow_cap, "Borrow cap exceeded"
-    assert _delta <= self._available_balance(), "Available balance exceeded"
 
 
 @external

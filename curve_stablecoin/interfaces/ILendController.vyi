@@ -31,6 +31,16 @@ def available_balance() -> uint256:
 
 
 @external
+def on_borrowed_token_transfer_in(_amount: uint256):
+    ...
+
+
+@external
+def on_borrowed_token_transfer_out(_amount: uint256):
+    ...
+
+
+@external
 @view
 def borrow_cap() -> uint256:
     ...
