@@ -23,11 +23,18 @@ def collateral_decimals():
 
 
 def test_low_decimals_do_not_accrue_interest(
-    vault, controller, amm, monetary_policy, borrowed_token, collateral_token, admin, accounts
+    vault,
+    controller,
+    amm,
+    monetary_policy,
+    borrowed_token,
+    collateral_token,
+    admin,
+    accounts,
 ):
     user = accounts[0]
     n_blocks = 3 * 24 * 3600 // 12  # 3 days
-    initial_debt = 100 * 10**borrowed_token.decimals()
+    initial_debt = 100 * 10 ** borrowed_token.decimals()
     collateral_amount = 10 ** collateral_token.decimals()
 
     monetary_policy.set_rate(1585489599, sender=admin)  # 5% APR
