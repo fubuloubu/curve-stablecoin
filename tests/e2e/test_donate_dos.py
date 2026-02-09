@@ -21,7 +21,7 @@ def test_reverts_when_lent_exceeds_deposited_under_donation(
     Test that verifies that issue: CS-CRVUSD-094 is fixed
     as the pool doesn't allow donated tokens to be lent out.
     """
-    initial_balance = vault.net_deposits()
+    initial_balance = controller.available_balance()
 
     COLLATERAL = 10**12 * 10 ** collateral_token.decimals()
     N_BANDS = 5
