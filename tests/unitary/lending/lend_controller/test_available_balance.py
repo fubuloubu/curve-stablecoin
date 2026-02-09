@@ -35,7 +35,9 @@ def test_increases_after_deposit(controller, vault, borrowed_token, amounts):
     vault.deposit(amounts["deposit"])
     after = snapshot(controller, vault)
 
-    assert after["available_balance"] == before["available_balance"] + amounts["deposit"]
+    assert (
+        after["available_balance"] == before["available_balance"] + amounts["deposit"]
+    )
     expect_same(before, after, "lent", "repaid", "collected")
 
 
@@ -54,7 +56,9 @@ def test_decreases_after_withdraw(
     vault.withdraw(amounts["deposit"])
     after = snapshot(controller, vault)
 
-    assert after["available_balance"] == before["available_balance"] - amounts["deposit"]
+    assert (
+        after["available_balance"] == before["available_balance"] - amounts["deposit"]
+    )
     expect_same(before, after, "lent", "repaid", "collected")
 
 
