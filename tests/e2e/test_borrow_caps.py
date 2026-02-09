@@ -55,11 +55,8 @@ def test_borrow_cap(controller, admin, collateral_token, borrowed_token, amounts
     # Increase collateral, temporarily lift the cap, and borrow more within the new limit
     controller.add_collateral(amounts["extra_collateral"])
     controller.set_borrow_cap(MAX_UINT256, sender=admin)
-    collateral_locked, _, current_debt, bands = controller.user_state(boa.env.eoa)
-    max_total = controller.max_borrowable(
-        collateral_locked, bands, current_debt, boa.env.eoa
-    )
-    extra_debt = max_total - current_debt
+    current_debt = controller.debt(boa.env.eoa)
+    extra_debt = controller.max_borrowable(0, 0, boa.env.eoa)
     assert extra_debt > 0
     controller.set_borrow_cap(current_debt + extra_debt, sender=admin)
     assert controller.available_balance() > 0

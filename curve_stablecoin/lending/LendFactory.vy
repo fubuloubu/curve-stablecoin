@@ -92,7 +92,7 @@ def __init__(
     pausable.__init__()
     ownable._transfer_ownership(_admin)
 
-    self.default_fee_receiver = _fee_receiver
+    self._set_default_fee_receiver(_fee_receiver)
 
 
 @external
@@ -331,6 +331,13 @@ def set_custom_fee_receiver(_controller: address, _fee_receiver: address):
     log ILendFactory.CustomSetFeeReceiver(controller=_controller, fee_receiver=_fee_receiver)
 
 
+@internal
+def _set_default_fee_receiver(_fee_receiver: address):
+    assert _fee_receiver != empty(address), "invalid receiver"
+    self.default_fee_receiver = _fee_receiver
+    log ILendFactory.SetFeeReceiver(fee_receiver=_fee_receiver)
+
+
 @external
 @reentrant
 def set_default_fee_receiver(_fee_receiver: address):
@@ -340,9 +347,7 @@ def set_default_fee_receiver(_fee_receiver: address):
     @param _fee_receiver Address of the receiver
     """
     ownable._check_owner()
-    assert _fee_receiver != empty(address), "invalid receiver"
-    self.default_fee_receiver = _fee_receiver
-    log ILendFactory.SetFeeReceiver(fee_receiver=_fee_receiver)
+    self._set_default_fee_receiver(_fee_receiver)
 
 
 @external

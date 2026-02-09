@@ -142,7 +142,7 @@ class StatefulVault(RuleBasedStateMachine):
         d_vault_balance = self.vault.balanceOf(user)
         d_user_tokens = self.borrowed_token.balanceOf(user)
         with boa.env.prank(user):
-            if self.total_assets + assets < 10000:
+            if self.total_assets + assets < 10000 or to_mint == 0:
                 with boa.reverts():
                     self.vault.deposit(assets)
                 return
@@ -166,7 +166,7 @@ class StatefulVault(RuleBasedStateMachine):
         d_vault_balance = self.vault.balanceOf(user_to)
         d_user_tokens = self.borrowed_token.balanceOf(user_from)
         with boa.env.prank(user_from):
-            if self.total_assets + assets < 10000:
+            if self.total_assets + assets < 10000 or to_mint == 0:
                 with boa.reverts():
                     self.vault.deposit(assets, user_to)
                 return
@@ -188,7 +188,7 @@ class StatefulVault(RuleBasedStateMachine):
         d_vault_balance = self.vault.balanceOf(user)
         d_user_tokens = self.borrowed_token.balanceOf(user)
         with boa.env.prank(user):
-            if self.total_assets + assets < 10000:
+            if self.total_assets + assets < 10000 or shares == 0:
                 with boa.reverts():
                     self.vault.mint(shares)
                 return
@@ -211,7 +211,7 @@ class StatefulVault(RuleBasedStateMachine):
         d_vault_balance = self.vault.balanceOf(user_to)
         d_user_tokens = self.borrowed_token.balanceOf(user_from)
         with boa.env.prank(user_from):
-            if self.total_assets + assets < 10000:
+            if self.total_assets + assets < 10000 or shares == 0:
                 with boa.reverts():
                     self.vault.mint(shares, user_to)
                 return
