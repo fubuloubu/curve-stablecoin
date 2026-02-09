@@ -492,9 +492,9 @@ def user_prices(_user: address) -> uint256[2]:  # Upper, lower
     ]
 
 
-@external
+@internal
 @view
-def user_state(_user: address) -> uint256[4]:
+def _user_state(_user: address) -> uint256[4]:
     """
     @notice Natspec for this function is available in its controller contract
     """
@@ -505,6 +505,15 @@ def user_state(_user: address) -> uint256[4]:
         N = convert(unsafe_add(unsafe_sub(ns[1], ns[0]), 1), uint256)
 
     return [xy[1], xy[0], self._debt(_user), N]
+
+
+@external
+@view
+def user_state(_user: address) -> uint256[4]:
+    """
+    @notice Natspec for this function is available in its controller contract
+    """
+    return self._user_state(_user)
 
 
 @internal
@@ -546,7 +555,6 @@ def _max_borrowable(
     _cap: uint256,
     _user: address,
 ) -> uint256:
-
     # Calculation of maximum which can be borrowed.
     # It corresponds to a minimum between the amount corresponding to price_oracle
     # and the one given by the min reachable band.
@@ -591,15 +599,22 @@ def _get_cap() -> uint256:
 @external
 @view
 def max_borrowable(
-    _collateral: uint256,
+    _d_collateral: uint256,
     _N: uint256,
-    _current_debt: uint256 = 0,
     _user: address = empty(address),
 ) -> uint256:
     """
     @notice Natspec for this function is available in its controller contract
     """
-    return self._max_borrowable(_collateral, _N, self._get_cap() + _current_debt, _user)
+    user_state: uint256[4] = self._user_state(_user)
+    if user_state[1] > 0:  # Can't borrow in soft-liquidation
+        return 0
+
+    N: uint256 = _N
+    if user_state[3] > 0:  # User has a position
+        N = user_state[3]
+
+    return self._max_borrowable(user_state[0] + _d_collateral, N, self._get_cap() + user_state[2], _user) - user_state[2]
 
 
 @external

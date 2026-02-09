@@ -70,7 +70,7 @@ def user_state(user: address) -> uint256[4]:
 
 @view
 @external
-def max_borrowable(collateral: uint256, N: uint256, current_debt: uint256, user: address) -> uint256:
+def max_borrowable(collateral: uint256, N: uint256, user: address) -> uint256:
     ...
 
 

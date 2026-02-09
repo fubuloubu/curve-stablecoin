@@ -94,21 +94,29 @@ def _get_cap() -> uint256:
     """
     total_debt: uint256 = self._total_debt()
     cap: uint256 = crv_math.sub_or_zero(self._borrow_cap(), total_debt)
+    print(self._available_balance(), cap)
     return min(self._available_balance(), cap)
 
 
 @external
 @view
 def max_borrowable(
-    _collateral: uint256,
+    _d_collateral: uint256,
     _N: uint256,
-    _current_debt: uint256 = 0,
     _user: address = empty(address),
 ) -> uint256:
     """
     @notice Natspec for this function is available in its controller contract
     """
-    return core._max_borrowable(_collateral, _N, self._get_cap() + _current_debt , _user)
+    user_state: uint256[4] = core._user_state(_user)
+    if user_state[1] > 0:  # Can't borrow in soft-liquidation
+        return 0
+
+    N: uint256 = _N
+    if user_state[3] > 0:  # The user has the position
+        N = user_state[3]
+
+    return core._max_borrowable(user_state[0] + _d_collateral, N, self._get_cap() + user_state[2] , _user) - user_state[2]
 
 
 @external
