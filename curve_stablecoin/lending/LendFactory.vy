@@ -154,7 +154,6 @@ def create(
             _fee,
             convert(0, uint256),
             _price_oracle,
-            code_offset=3,
         )
     )
     controller: IController = IController(
