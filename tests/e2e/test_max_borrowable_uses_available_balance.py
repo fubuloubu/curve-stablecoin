@@ -20,11 +20,13 @@ def seed_liquidity():
     return 0
 
 
-def test_max_borrowable_uses_available_balance(controller, borrowed_token, collateral_decimals, market_type):
-    controller_balance = 10**borrowed_token.decimals()
+def test_max_borrowable_uses_available_balance(
+    controller, borrowed_token, collateral_decimals, market_type
+):
+    controller_balance = 10 ** borrowed_token.decimals()
     boa.deal(borrowed_token, controller, controller_balance)
 
-    max_borrowable = controller.max_borrowable(10 ** collateral_decimals, 10)
+    max_borrowable = controller.max_borrowable(10**collateral_decimals, 10)
     if market_type == "mint":
         assert max_borrowable == controller_balance
     else:

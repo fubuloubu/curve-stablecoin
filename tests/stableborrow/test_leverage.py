@@ -123,11 +123,9 @@ def test_leverage_property(
             * 3000
             // 10 ** (collateral_token.decimals() - stablecoin.decimals())
         )
-        user_state = market_controller.user_state(user)
         more_debt_eff = min(
             more_debt,
-            market_controller.max_borrowable(user_state[0] + amount, 5, user_state[2])
-            - user_state[2],
+            market_controller.max_borrowable(amount, 0, user),
         )
         loan_more_mul_eff = (
             loan_more_mul

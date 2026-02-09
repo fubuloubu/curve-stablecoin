@@ -100,8 +100,6 @@ def loan_increments_for_borrow_more(
     controller,
     user: str,
     N: int,
-    collateral0: int,
-    debt0: int,
 ) -> tuple[int, int]:
     """
     Draw (d_collateral, d_debt) increments for a safe borrow_more call.
@@ -117,9 +115,8 @@ def loan_increments_for_borrow_more(
     d_collateral = draw(token_amounts(token_decs, min_value=1, max_value=1_000_000))
 
     # Compute available headroom and draw delta debt safely within it
-    cap_total = controller.max_borrowable(collateral0 + d_collateral, N, debt0, user)
-    assume(cap_total > debt0)
-    delta_cap = cap_total - debt0
+    delta_cap = controller.max_borrowable(d_collateral, N, user)
+    assume(delta_cap > 0)
     min_delta = max(1, delta_cap // 32)
     d_debt = draw(integers(min_value=min_delta, max_value=delta_cap))
 
@@ -225,9 +222,7 @@ class ControllerStateful(RuleBasedStateMachine):
 
         # Draw increments using the shared strategy
         d_collateral, d_debt = data.draw(
-            loan_increments_for_borrow_more(
-                self.controller, user, N, collateral0, debt0
-            ),
+            loan_increments_for_borrow_more(self.controller, user, N),
             label="borrow_more_increments",
         )
 
