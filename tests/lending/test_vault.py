@@ -47,7 +47,7 @@ def test_vault_creation(
     assert controller.monetary_policy() == monetary_policy.address
     n = factory.market_count()
     assert n > 0
-    assert factory.vaults(n - 1) == vault.address
+    assert factory.markets(n - 1).vault == vault.address
 
     market = factory.markets(n - 1)
     assert market.amm == amm.address
@@ -57,7 +57,7 @@ def test_vault_creation(
     assert market.price_oracle == price_oracle.address
     assert market.monetary_policy == monetary_policy.address
 
-    assert factory.vaults(factory.vaults_index(vault.address)) == vault.address
+    assert factory.vaults_index(vault.address) == n - 1
 
 
 @pytest.mark.parametrize("supply_limit", [0, 1000 * 10**18, 2**256 - 1, None])

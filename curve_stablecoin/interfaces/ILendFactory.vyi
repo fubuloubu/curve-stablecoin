@@ -48,6 +48,17 @@ struct Market:
     monetary_policy: IMonetaryPolicy
 
 
+flag ContractType:
+    VAULT
+    CONTROLLER
+    AMM
+
+
+struct ContractInfo:
+    market_index: uint256
+    contract_type: ContractType
+
+
 @external
 def transfer_ownership(new_owner: address):
     ...
@@ -155,12 +166,6 @@ def fee_receiver(_controller: address = msg.sender) -> address:
     ...
 
 
-@view
-@external
-def vaults(_index: uint256) -> IVault:
-    ...
-
-
 @external
 @view
 def version() -> String[5]:
@@ -175,13 +180,5 @@ def market_count() -> uint256:
 
 @view
 @external
-def names(_index: uint256) -> String[64]:
+def check_contract(_contract: address) -> ContractInfo:
     ...
-
-
-@view
-@external
-def check_contract(_contract: address) -> bool:
-    ...
-
-# TODO add new functions from recent edits

@@ -2,8 +2,8 @@ import boa
 from tests.utils import filter_logs
 
 
-def test_default_behavior(factory, admin, alice):
-    new_fee_receiver = alice
+def test_default_behavior(factory, admin):
+    new_fee_receiver = boa.env.generate_address("new_fee_receiver")
     assert factory.default_fee_receiver() != new_fee_receiver
 
     with boa.env.prank(admin):
@@ -17,8 +17,9 @@ def test_default_behavior(factory, admin, alice):
     assert logs[0].fee_receiver == new_fee_receiver
 
 
-def test_unauthorized(factory, alice):
-    new_fee_receiver = alice
+def test_unauthorized(factory):
+    non_owner = boa.env.generate_address("non_owner")
+    new_fee_receiver = boa.env.generate_address("new_fee_receiver")
     with boa.reverts("ownable: caller is not the owner"):
-        with boa.env.prank(alice):
+        with boa.env.prank(non_owner):
             factory.set_default_fee_receiver(new_fee_receiver)
