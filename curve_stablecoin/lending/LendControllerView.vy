@@ -94,7 +94,6 @@ def _get_cap() -> uint256:
     """
     total_debt: uint256 = self._total_debt()
     cap: uint256 = crv_math.sub_or_zero(self._borrow_cap(), total_debt)
-    print(self._available_balance(), cap)
     return min(self._available_balance(), cap)
 
 
