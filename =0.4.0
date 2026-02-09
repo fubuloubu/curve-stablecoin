@@ -1,0 +1,27 @@
+Defaulting to user installation because normal site-packages is not writeable
+Collecting vyper
+  Downloading vyper-0.4.3-py3-none-any.whl.metadata (7.2 kB)
+Collecting cbor2<6,>=5.4.6 (from vyper)
+  Downloading cbor2-5.8.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.4 kB)
+Collecting asttokens<4,>=2.0.5 (from vyper)
+  Downloading asttokens-3.0.1-py3-none-any.whl.metadata (4.9 kB)
+Collecting pycryptodome<4,>=3.5.1 (from vyper)
+  Downloading pycryptodome-3.23.0-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (3.4 kB)
+Requirement already satisfied: packaging>=23.1 in /usr/lib/python3/dist-packages (from vyper) (24.0)
+Collecting lark<2,>=1.0.0 (from vyper)
+  Using cached lark-1.3.1-py3-none-any.whl.metadata (1.8 kB)
+Requirement already satisfied: wheel in /usr/lib/python3/dist-packages (from vyper) (0.42.0)
+Collecting immutables (from vyper)
+  Downloading immutables-0.21-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.5 kB)
+Downloading vyper-0.4.3-py3-none-any.whl (403 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 403.1/403.1 kB 17.9 MB/s eta 0:00:00
+Downloading asttokens-3.0.1-py3-none-any.whl (27 kB)
+Downloading cbor2-5.8.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (285 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 285.4/285.4 kB 82.4 MB/s eta 0:00:00
+Using cached lark-1.3.1-py3-none-any.whl (113 kB)
+Downloading pycryptodome-3.23.0-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.3/2.3 MB 129.2 MB/s eta 0:00:00
+Downloading immutables-0.21-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl (104 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 104.9/104.9 kB 40.0 MB/s eta 0:00:00
+Installing collected packages: pycryptodome, lark, immutables, cbor2, asttokens, vyper
+Successfully installed asttokens-3.0.1 cbor2-5.8.0 immutables-0.21 lark-1.3.1 pycryptodome-3.23.0 vyper-0.4.3
