@@ -17,8 +17,9 @@ def test_lend_apr_calculation(vault, amm, controller, admin_percentage):
     amm.eval(f"self.rate = {rate}")
 
     seconds_in_year = 365 * 86400
+    admin_fees = (debt * rate_mul // _total_debt_rate_mul - debt) * (WAD - admin_percentage) // WAD
     debt = debt * rate_mul // _total_debt_rate_mul
-    gross_apr = rate * seconds_in_year * debt // (debt + borrowed_balance)
+    gross_apr = rate * seconds_in_year * debt // (borrowed_balance + debt - admin_fees)
     expected_apr = gross_apr * (WAD - admin_percentage) // WAD
 
     actual_apr = vault.lend_apr()

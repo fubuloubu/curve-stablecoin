@@ -31,8 +31,8 @@ def test_max_redeem_controller_limited(
 
     # Reduce controller balance to be less than user's position
     controller_balance = controller.available_balance()
-    # Increase lent to reduce borrowed_balance
-    controller.eval(f"core.lent = {controller_balance // 2}")
+    # Reduce available_balance
+    controller.eval(f"self.available_balance = {controller_balance // 2}")
     limited_balance = controller_balance // 2
 
     # maxRedeem should be limited by controller balance
@@ -63,9 +63,8 @@ def test_max_redeem_zero_controller_balance(
     """Test maxRedeem when controller has no liquidity."""
     deposit_into_vault()
 
-    # Set controller balance to 0 by setting lent = borrowed_balance
-    borrowed_balance = controller.available_balance()
-    controller.eval(f"core.lent = {borrowed_balance}")
+    # Set controller balance to 0
+    controller.eval(f"self.available_balance = 0")
 
     # maxRedeem should return 0 (limited by controller balance)
     actual_max = vault.maxRedeem(boa.env.eoa)
