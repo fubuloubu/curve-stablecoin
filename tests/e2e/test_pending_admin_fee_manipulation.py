@@ -35,19 +35,19 @@ def _ceil_div(n: int, d: int) -> int:
 
 
 def test_checkout_collect_fees_changes_withdraw_terms(
-        admin,
-        vault,
-        controller,
-        amm,
-        monetary_policy,
-        borrowed_token,
-        collateral_token,
+    admin,
+    vault,
+    controller,
+    amm,
+    monetary_policy,
+    borrowed_token,
+    collateral_token,
 ):
     # 1) Configure lending protocol: done by fixtures (lending market)
 
     # 2) Set rate with 100% APY (per-second rate, 1e18-based)
     seconds_per_year = 365 * 86400
-    rate_100_apy = 10 ** 18 // seconds_per_year
+    rate_100_apy = 10**18 // seconds_per_year
     monetary_policy.set_rate(rate_100_apy, sender=admin)
     controller.save_rate(sender=admin)
 
@@ -67,7 +67,7 @@ def test_checkout_collect_fees_changes_withdraw_terms(
     borrower = boa.env.generate_address("borrower")
     debt = lp_assets // 2
 
-    collateral = 50 * debt * amm.price_oracle() // 10 ** 18
+    collateral = 50 * debt * amm.price_oracle() // 10**18
     boa.deal(collateral_token, borrower, collateral)
     max_approve(collateral_token, controller, sender=borrower)
     with boa.env.prank(borrower):
@@ -92,7 +92,9 @@ def test_checkout_collect_fees_changes_withdraw_terms(
                 print("Without prior collecting/updating fees")
 
             print("Attacker deposit", attacker_assets)
-            print("Available balance before time travel", controller.available_balance())
+            print(
+                "Available balance before time travel", controller.available_balance()
+            )
             print("Total assets before time travel", vault.totalAssets())
 
             # Wait 12 seconds (simulate 1 block)
