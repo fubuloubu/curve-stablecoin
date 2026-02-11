@@ -1,3 +1,4 @@
+import pytest
 import boa
 from hypothesis import given
 from hypothesis import strategies as st
@@ -7,8 +8,12 @@ from tests.utils.constants import MAX_TICKS
 MAX_N = 2**127 - 1
 MIN_N = -(2**127) + 1  # <- not -2**127!
 MAX_SPAN = MAX_TICKS - 1
-DEPOSIT_AMOUNT = 10**6
 MAX_SKIP_TICKS = 1024
+
+
+@pytest.fixture(scope="module")
+def deposit_amount(collateral_token):
+    return int(0.01 * 10 ** collateral_token.decimals())
 
 
 @st.composite
@@ -22,13 +27,13 @@ def tick_ranges(draw, active_band):
 
 
 @given(data=st.data())
-def test_ammpack_round_trip(amm, controller, data):
+def test_ammpack_round_trip(amm, controller, data, deposit_amount):
     active_band = amm.active_band()
     n1, n2 = data.draw(tick_ranges(active_band=active_band))
 
     with boa.env.anchor():
         amm.deposit_range(
-            boa.env.eoa, DEPOSIT_AMOUNT, n1, n2, sender=controller.address
+            boa.env.eoa, deposit_amount, n1, n2, sender=controller.address
         )
 
         n1out, n2out = amm.read_user_tick_numbers(boa.env.eoa)

@@ -3,6 +3,7 @@ import pytest
 from eth_abi import encode
 from hypothesis import given, settings
 from hypothesis import strategies as st
+from tests.utils.constants import DEAD_SHARES, MIN_SHARES_ALLOWED
 
 
 def test_leverage(
@@ -95,8 +96,16 @@ def test_leverage_property(
         debt = debt_eff
         calldata = encode(["uint256"], [0])
         if (
-            debt // 3000 // 10 ** (stablecoin.decimals() - collateral_token.decimals())
-        ) <= collateral_token.balanceOf(fake_leverage.address) and debt > 0:
+            (
+                debt
+                // 3000
+                // 10 ** (stablecoin.decimals() - collateral_token.decimals())
+            )
+            <= collateral_token.balanceOf(fake_leverage.address)
+            and debt > 0
+            and amount * 10 ** (18 - collateral_token.decimals()) // 5 * DEAD_SHARES
+            >= MIN_SHARES_ALLOWED
+        ):
             market_controller.create_loan(
                 amount, debt, 5, user, fake_leverage.address, calldata
             )

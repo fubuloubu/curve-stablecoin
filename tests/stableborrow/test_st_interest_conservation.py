@@ -9,7 +9,7 @@ from hypothesis.stateful import (
 )
 
 
-from tests.utils.constants import DEAD_SHARES
+from tests.utils.constants import DEAD_SHARES, MIN_SHARES_ALLOWED
 
 
 class StatefulLendBorrow(RuleBasedStateMachine):
@@ -86,6 +86,14 @@ class StatefulLendBorrow(RuleBasedStateMachine):
                     self.controller.create_loan(c_amount, amount, n)
                 return
 
+            if (
+                c_amount * 10 ** (18 - self.collateral.decimals()) // n * DEAD_SHARES
+                < MIN_SHARES_ALLOWED
+            ):
+                with boa.reverts("Amount too low"):
+                    self.controller.create_loan(c_amount, amount, n)
+                return
+
             if c_amount // n <= 2 * DEAD_SHARES:
                 try:
                     self.controller.create_loan(c_amount, amount, n)
@@ -122,23 +130,13 @@ class StatefulLendBorrow(RuleBasedStateMachine):
 
             # When we have interest - need to have admin fees claimed to have enough in circulation
             self.controller.collect_fees()
-            # And we need to transfer them to us if necessary
+            # And we need enough funds
             user_debt = self.controller.debt(user)
             user_balance = self.stablecoin.balanceOf(user)
-            diff = user_debt - user_balance
-            if diff > 0:
-                admin_balance = self.stablecoin.balanceOf(self.accounts[0])
-                with boa.env.prank(self.accounts[0]):
-                    self.stablecoin.transfer(user, min(diff, admin_balance))
-                if user_balance + admin_balance < min(amount, user_debt):
-                    assert (
-                        sum(
-                            sum(abs(n) for n in self.amm.read_user_tick_numbers(u)) > 0
-                            for u in self.accounts[:10]
-                        )
-                        > 1
-                    )
-                    return
+            if user_balance < min(amount, user_debt):
+                boa.deal(
+                    self.stablecoin, user, min(amount, user_debt), adjust_supply=False
+                )
 
             self.controller.repay(amount, user)
 

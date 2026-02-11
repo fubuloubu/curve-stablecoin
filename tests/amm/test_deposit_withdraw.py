@@ -5,7 +5,7 @@ from hypothesis import strategies as st
 from tests.utils import mint_for_testing
 
 
-from tests.utils.constants import DEAD_SHARES
+from tests.utils.constants import DEAD_SHARES, MIN_SHARES_ALLOWED
 
 
 @given(
@@ -31,7 +31,19 @@ def test_deposit_withdraw(
             else:
                 precisions[user] = DEAD_SHARES / (amount // (dn + 1)) + 1e-6
             n2 = n1 + dn
-            if amount * 10 ** (18 - collateral_token.decimals()) // (dn + 1) <= 100:
+
+            y_per_band = amount * 10 ** (18 - collateral_token.decimals()) // (dn + 1)
+            amount_too_low = y_per_band <= 100
+            for n in range(n1, n2 + 1):
+                if amount_too_low:
+                    break
+                total_y = amm.bands_y(n)
+                # Total / user share
+                s = amm.eval(f"self.total_shares[{n}]")
+                ds = ((s + DEAD_SHARES) * y_per_band) // (total_y + 1)
+                amount_too_low = amount_too_low or ds < MIN_SHARES_ALLOWED
+
+            if amount_too_low:
                 with boa.reverts("Amount too low"):
                     amm.deposit_range(user, amount, n1, n2)
             else:
