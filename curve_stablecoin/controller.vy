@@ -265,11 +265,13 @@ def _update_total_debt(_d_debt: uint256, _rate_mul: uint256, _is_increase: bool)
     loan.initial_debt = loan_with_interest
     if _is_increase:
         loan.initial_debt += _d_debt
-        extcall VIRTUAL._on_debt_increased(loan.initial_debt)
     else:
         loan.initial_debt = crv_math.sub_or_zero(loan.initial_debt, _d_debt)
     loan.rate_mul = _rate_mul
     self._total_debt = loan
+
+    if _is_increase:
+        extcall VIRTUAL._on_debt_increased(loan.initial_debt)
 
     return loan
 
