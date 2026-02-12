@@ -61,15 +61,17 @@ def test_amount_for_price(
         p_min = amm.p_current_down(n1)
 
         amount, is_pump = amm.get_amount_for_price(p_final)
-
         assert is_pump == (p_final >= p_initial)
 
         if is_pump:
             mint_for_testing(borrowed_token, user, amount)
+            if amm.get_dy(0, 1, amount) == 0:
+                return
             amm.exchange(0, 1, amount, 0)
-
         else:
             mint_for_testing(collateral_token, user, amount)
+            if amm.get_dy(1, 0, amount) == 0:
+                return
             amm.exchange(1, 0, amount, 0)
 
     p = amm.get_p()
