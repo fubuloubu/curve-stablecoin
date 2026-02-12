@@ -92,8 +92,8 @@ exports: (
     core.max_borrowable,
 )
 
-borrow_cap: public(reentrant(uint256))
-available_balance: public(reentrant(uint256))
+borrow_cap: public(uint256)
+available_balance: public(uint256)
 VAULT: immutable(IVault)
 
 
