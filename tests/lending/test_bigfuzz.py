@@ -266,7 +266,7 @@ class BigFuzz(RuleBasedStateMachine):
                     return
 
                 if sx == 0 or amount == 0:
-                    max_debt = self.controller.max_borrowable(sy + y, n, current_debt)
+                    max_debt = current_debt + self.controller.max_borrowable(y, n, user)
                     if final_debt > max_debt and amount > 0:
                         # XXX any borrowed_mul here?
                         if final_debt < max_debt / (

@@ -47,7 +47,7 @@ def test_vault_creation(
     assert controller.monetary_policy() == monetary_policy.address
     n = factory.market_count()
     assert n > 0
-    assert factory.vaults(n - 1) == vault.address
+    assert factory.markets(n - 1).vault == vault.address
 
     market = factory.markets(n - 1)
     assert market.amm == amm.address
@@ -57,7 +57,7 @@ def test_vault_creation(
     assert market.price_oracle == price_oracle.address
     assert market.monetary_policy == monetary_policy.address
 
-    assert factory.vaults(factory.vaults_index(vault.address)) == vault.address
+    assert factory.vaults_index(vault.address) == n - 1
 
 
 @pytest.mark.parametrize("supply_limit", [0, 1000 * 10**18, 2**256 - 1, None])
@@ -142,7 +142,7 @@ class StatefulVault(RuleBasedStateMachine):
         d_vault_balance = self.vault.balanceOf(user)
         d_user_tokens = self.borrowed_token.balanceOf(user)
         with boa.env.prank(user):
-            if self.total_assets + assets < 10000:
+            if self.total_assets + assets < 10000 or to_mint == 0:
                 with boa.reverts():
                     self.vault.deposit(assets)
                 return
@@ -166,7 +166,7 @@ class StatefulVault(RuleBasedStateMachine):
         d_vault_balance = self.vault.balanceOf(user_to)
         d_user_tokens = self.borrowed_token.balanceOf(user_from)
         with boa.env.prank(user_from):
-            if self.total_assets + assets < 10000:
+            if self.total_assets + assets < 10000 or to_mint == 0:
                 with boa.reverts():
                     self.vault.deposit(assets, user_to)
                 return
@@ -188,7 +188,7 @@ class StatefulVault(RuleBasedStateMachine):
         d_vault_balance = self.vault.balanceOf(user)
         d_user_tokens = self.borrowed_token.balanceOf(user)
         with boa.env.prank(user):
-            if self.total_assets + assets < 10000:
+            if self.total_assets + assets < 10000 or shares == 0:
                 with boa.reverts():
                     self.vault.mint(shares)
                 return
@@ -211,7 +211,7 @@ class StatefulVault(RuleBasedStateMachine):
         d_vault_balance = self.vault.balanceOf(user_to)
         d_user_tokens = self.borrowed_token.balanceOf(user_from)
         with boa.env.prank(user_from):
-            if self.total_assets + assets < 10000:
+            if self.total_assets + assets < 10000 or shares == 0:
                 with boa.reverts():
                     self.vault.mint(shares, user_to)
                 return

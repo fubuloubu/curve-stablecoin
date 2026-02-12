@@ -62,7 +62,7 @@ def test_max_borrowable(
     with boa.env.prank(accounts[0]):
         market_controller.set_extra_health(extra_health)
         max_borrowable_user = market_controller.max_borrowable(
-            collateral_amount, n, 0, accounts[0]
+            collateral_amount, n, accounts[0]
         )
         if extra_health > 10**16:
             assert max_borrowable_user < max_borrowable

@@ -476,22 +476,19 @@ def _get_y_effective(
 @external
 @view
 def max_borrowable(
-    _collateral: uint256,
-    _N: uint256,
-    _current_debt: uint256 = 0,
-    _user: address = empty(address),
+    _d_collateral: uint256, _N: uint256, _user: address = empty(address)
 ) -> uint256:
     """
-    @notice Calculation of maximum which can be borrowed (details in comments)
-    @param _collateral Collateral amount against which to borrow
-    @param _N number of bands to have the deposit into
-    @param _current_debt Current debt of the user (if any)
-    @param _user User to calculate the value for (only necessary for nonzero extra_health)
-    @return Maximum amount of borrowed asset to borrow
+    @notice Calculation of maximum which can be borrowed.
+            Returns the maximum additional amount to be borrowed in case the user has a position.
+    @param _d_collateral Collateral amount against which to borrow
+                         (additional amount if the user has a position)
+    @param _N Number of bands to have the deposit into (to be ignored if the user has a position)
+    @param _user User to calculate the value for
+                 (can be zero address for create_loan if the user doesn't have extra_health)
+    @return Maximum (additional) amount of borrowed asset to borrow
     """
-    return staticcall self._view.max_borrowable(
-        _collateral, _N, _current_debt, _user
-    )
+    return staticcall self._view.max_borrowable(_d_collateral, _N, _user)
 
 
 @external

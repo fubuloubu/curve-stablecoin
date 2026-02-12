@@ -168,11 +168,10 @@ def test_gauge_integral_with_exchanges(
                     amount_bob = randrange(1, collateral_token.balanceOf(bob) // 10 + 1)
                     collateral_token.approve(market_controller.address, amount_bob)
                     max_borrowable_bob = market_controller.max_borrowable(
-                        amount_bob + collateral_in_amm_bob, 10, debt_bob
+                        amount_bob, 10, bob
                     )
                     borrow_amount_bob = min(
-                        int(random() * (max_borrowable_bob - debt_bob)),
-                        max_borrowable_bob - debt_bob,
+                        int(random() * max_borrowable_bob), max_borrowable_bob
                     )
                     if borrow_amount_bob > 0:
                         print("Bob deposits:", amount_bob, borrow_amount_bob)
@@ -241,11 +240,10 @@ def test_gauge_integral_with_exchanges(
                             market_controller.address, amount_alice
                         )
                         max_borrowable_alice = market_controller.max_borrowable(
-                            amount_alice + collateral_in_amm_alice, 10, debt_alice
+                            amount_alice, 10, alice
                         )
                         borrow_amount_alice = min(
-                            int(random() * (max_borrowable_alice - debt_alice)),
-                            max_borrowable_alice - debt_alice,
+                            int(random() * max_borrowable_alice), max_borrowable_alice
                         )
                         if borrow_amount_alice > 0:
                             print("Alice deposits:", amount_alice, borrow_amount_alice)

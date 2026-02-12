@@ -9,8 +9,6 @@
 @custom:kill Pause factory to halt deployments.
 """
 
-# TODO increase test coverage
-
 from curve_std.interfaces import IERC20
 
 from curve_stablecoin.interfaces import IVault
@@ -53,28 +51,12 @@ WAD: constant(uint256) = c.WAD
 default_fee_receiver: public(address)
 fee_receivers: HashMap[address, address]
 
-# TODO getter here is useless
-# Vaults can only be created but not removed
 _vaults: IVault[10**18]
-# https://github.com/vyperlang/vyper/issues/4721
-@external
-@view
-def vaults(_index: uint256) -> IVault:
-    """
-    @notice Address of the vault by its index
-    """
-    return self._vaults[_index]
-
-
 _vaults_index: HashMap[IVault, uint256]
 market_count: public(uint256)
 
-# TODO extend this to simplify reverse search
-# Checks if a contract (vault, controller or amm) has been deployed by this factory
-check_contract: public(HashMap[address, bool])
-
-# TODO remove
-names: public(HashMap[uint256, String[64]])
+# Maps contract addresses to market index and type for reverse lookup
+check_contract: public(HashMap[address, ILendFactory.ContractInfo])
 
 
 @deploy
@@ -110,7 +92,7 @@ def __init__(
     pausable.__init__()
     ownable._transfer_ownership(_admin)
 
-    self.default_fee_receiver = _fee_receiver
+    self._set_default_fee_receiver(_fee_receiver)
 
 
 @external
@@ -154,8 +136,8 @@ def create(
 
     # Validate price oracle
     p: uint256 = (staticcall _price_oracle.price())
-    assert p > 0
-    assert extcall _price_oracle.price_w() == p
+    assert p > 0  # dev: price oracle returned zero
+    assert extcall _price_oracle.price_w() == p  # dev: price oracle price() and price_w() mismatch
 
     vault: IVault = IVault(create_from_blueprint(blueprint_registry.get("VLT")))
     amm: IAMM = IAMM(
@@ -172,7 +154,6 @@ def create(
             _fee,
             convert(0, uint256),
             _price_oracle,
-            code_offset=3,
         )
     )
     controller: IController = IController(
@@ -186,12 +167,21 @@ def create(
             _loan_discount,
             _liquidation_discount,
             blueprint_registry.get("CTRV"),
-            code_offset=3, # TODO remove code offsets
         )
     )
-    self.check_contract[vault.address] = True
-    self.check_contract[amm.address] = True
-    self.check_contract[controller.address] = True
+    market_count: uint256 = self.market_count
+    self.check_contract[vault.address] = ILendFactory.ContractInfo(
+        market_index=market_count,
+        contract_type=ILendFactory.ContractType.VAULT,
+    )
+    self.check_contract[controller.address] = ILendFactory.ContractInfo(
+        market_index=market_count,
+        contract_type=ILendFactory.ContractType.CONTROLLER,
+    )
+    self.check_contract[amm.address] = ILendFactory.ContractInfo(
+        market_index=market_count,
+        contract_type=ILendFactory.ContractType.AMM,
+    )
 
     extcall amm.set_admin(controller.address)
 
@@ -199,8 +189,6 @@ def create(
 
     # Validate monetary policy using controller context
     extcall _monetary_policy.rate_write(controller.address)
-
-    market_count: uint256 = self.market_count
     log ILendFactory.NewVault(
         id=market_count,
         collateral_token=_collateral_token,
@@ -214,7 +202,6 @@ def create(
     self._vaults[market_count] = vault
     # Store index with 2**128 offset so missing vault lookups revert (e.g. nonexistent vault would otherwise read index 0)
     self._vaults_index[vault] = market_count + 2**128
-    self.names[market_count] = _name
     self.market_count = market_count + 1
 
     if _supply_limit < max_value(uint256):
@@ -338,9 +325,17 @@ def set_custom_fee_receiver(_controller: address, _fee_receiver: address):
     @param _fee_receiver Address of the receiver
     """
     ownable._check_owner()
-    # TODO checks controller belongs to factory
+    contract_info: ILendFactory.ContractInfo = self.check_contract[_controller]
+    assert contract_info.contract_type == ILendFactory.ContractType.CONTROLLER, "not a controller"
     self.fee_receivers[_controller] = _fee_receiver
     log ILendFactory.CustomSetFeeReceiver(controller=_controller, fee_receiver=_fee_receiver)
+
+
+@internal
+def _set_default_fee_receiver(_fee_receiver: address):
+    assert _fee_receiver != empty(address), "invalid receiver"
+    self.default_fee_receiver = _fee_receiver
+    log ILendFactory.SetFeeReceiver(fee_receiver=_fee_receiver)
 
 
 @external
@@ -352,9 +347,7 @@ def set_default_fee_receiver(_fee_receiver: address):
     @param _fee_receiver Address of the receiver
     """
     ownable._check_owner()
-    assert _fee_receiver != empty(address), "invalid receiver"
-    self.default_fee_receiver = _fee_receiver
-    log ILendFactory.SetFeeReceiver(fee_receiver=_fee_receiver)
+    self._set_default_fee_receiver(_fee_receiver)
 
 
 @external

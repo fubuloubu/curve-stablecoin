@@ -76,11 +76,9 @@ class StateMachine(RuleBasedStateMachine):
                 self.market_controller.user_state(user)
             )
             max_borrowable = self.market_controller.max_borrowable(
-                deposit_amount + collateral_in_amm, 10, debt
+                deposit_amount, 10, user
             )
-            borrow_amount = min(
-                int((max_borrowable - debt) * borrow_pct), max_borrowable - debt
-            )
+            borrow_amount = min(int(max_borrowable * borrow_pct), max_borrowable)
             i = 1
             while True:
                 try:
