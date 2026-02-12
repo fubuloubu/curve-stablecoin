@@ -43,7 +43,9 @@ def test_immediate(
 ):
     collateral_decimals = collateral_token.decimals()
     borrowed_decimals = borrowed_token.decimals()
-    deposit_amount = max(int(deposit_amount * 10**18), (dn + 1) * MIN_SHARES_ALLOWED // DEAD_SHARES)
+    deposit_amount = max(
+        int(deposit_amount * 10**18), (dn + 1) * MIN_SHARES_ALLOWED // DEAD_SHARES
+    )
     deposit_amount = deposit_amount // 10 ** (18 - collateral_token.decimals())
     deposit_amount = max(deposit_amount, dn + 1)
     user = accounts[0]
