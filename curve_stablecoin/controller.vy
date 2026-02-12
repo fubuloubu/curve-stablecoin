@@ -271,7 +271,10 @@ def _update_total_debt(_d_debt: uint256, _rate_mul: uint256, _is_increase: bool)
     self._total_debt = loan
 
     if _is_increase:
+        extcall VIRTUAL.on_borrowed_token_transfer_out(_d_debt)
         extcall VIRTUAL._on_debt_increased(loan.initial_debt)
+    else:
+        extcall VIRTUAL.on_borrowed_token_transfer_in(_d_debt)
 
     return loan
 
@@ -618,7 +621,6 @@ def create_loan(
 
     more_collateral: uint256 = 0
     if _callbacker != empty(address):
-        extcall VIRTUAL.on_borrowed_token_transfer_out(_debt)
         tkn.transfer(BORROWED_TOKEN, _callbacker, _debt)
         # If there is any unused debt, callbacker can send it to the user
         more_collateral = self.execute_callback(
@@ -655,7 +657,6 @@ def create_loan(
     tkn.transfer_from(COLLATERAL_TOKEN, msg.sender, AMM.address, _collateral)
     tkn.transfer_from(COLLATERAL_TOKEN, _callbacker, AMM.address, more_collateral)
     if _callbacker == empty(address):
-        extcall VIRTUAL.on_borrowed_token_transfer_out(_debt)
         tkn.transfer(BORROWED_TOKEN, _for, _debt)
 
     self._update_total_debt(_debt, rate_mul, True)
@@ -877,7 +878,6 @@ def borrow_more(
 
     more_collateral: uint256 = 0
     if _callbacker != empty(address):
-        extcall VIRTUAL.on_borrowed_token_transfer_out(_debt)
         tkn.transfer(BORROWED_TOKEN, _callbacker, _debt)
         # If there is any unused debt, callbacker can send it to the user
         more_collateral = self.execute_callback(
@@ -897,7 +897,6 @@ def borrow_more(
     tkn.transfer_from(COLLATERAL_TOKEN, msg.sender, AMM.address, _collateral)
     tkn.transfer_from(COLLATERAL_TOKEN, _callbacker, AMM.address, more_collateral)
     if _callbacker == empty(address):
-        extcall VIRTUAL.on_borrowed_token_transfer_out(_debt)
         tkn.transfer(BORROWED_TOKEN, _for, _debt)
 
     self._update_total_debt(_debt, rate_mul, True)
@@ -937,16 +936,11 @@ def _repay_full(
     wallet_d_debt: uint256 = crv_math.sub_or_zero(_debt, non_wallet_d_debt)
     if _xy[0] > 0:  #  pull borrowed tokens from AMM (already soft liquidated)
         assert _approval  # dev: need approval to spend borrower's xy[0]
-        extcall VIRTUAL.on_borrowed_token_transfer_in(_xy[0])
         tkn.transfer_from(BORROWED_TOKEN, AMM.address, self, _xy[0])
-
-    extcall VIRTUAL.on_borrowed_token_transfer_in(_cb.borrowed + wallet_d_debt)
     tkn.transfer_from(BORROWED_TOKEN, _callbacker, self, _cb.borrowed)
     tkn.transfer_from(BORROWED_TOKEN, msg.sender, self, wallet_d_debt)
 
-    extcall VIRTUAL.on_borrowed_token_transfer_out(crv_math.sub_or_zero(non_wallet_d_debt, _debt))
     tkn.transfer(BORROWED_TOKEN, _for, crv_math.sub_or_zero(non_wallet_d_debt, _debt))
-
 
     # ================= Recover collateral tokens (xy[1]) =================
     if _callbacker == empty(address):
@@ -1019,10 +1013,7 @@ def _repay_partial(
 
     # ================= Recover borrowed tokens (xy[0]) =================
     if _shrink:
-        extcall VIRTUAL.on_borrowed_token_transfer_in(_xy[0])
         tkn.transfer_from(BORROWED_TOKEN, AMM.address, self, _xy[0])
-
-    extcall VIRTUAL.on_borrowed_token_transfer_in(_cb.borrowed + _wallet_d_debt)
     tkn.transfer_from(BORROWED_TOKEN, _callbacker, self, _cb.borrowed)
     tkn.transfer_from(BORROWED_TOKEN, msg.sender, self, _wallet_d_debt)
 
@@ -1284,7 +1275,6 @@ def liquidate(
 
     min_amm_burn: uint256 = min(xy[0], debt)
 
-    extcall VIRTUAL.on_borrowed_token_transfer_in(min_amm_burn)
     tkn.transfer_from(BORROWED_TOKEN, AMM.address, self, min_amm_burn)
 
     if debt > xy[0]:
@@ -1294,7 +1284,6 @@ def liquidate(
             # Withdraw collateral if no callback is present
             tkn.transfer_from(COLLATERAL_TOKEN, AMM.address, msg.sender, xy[1])
             # Request what's left from user
-            extcall VIRTUAL.on_borrowed_token_transfer_in(to_repay)
             tkn.transfer_from(BORROWED_TOKEN, msg.sender, self, to_repay)
 
         else:
@@ -1312,9 +1301,7 @@ def liquidate(
             )
             assert cb.borrowed >= to_repay, "no enough proceeds"
 
-            extcall VIRTUAL.on_borrowed_token_transfer_in(to_repay)
             tkn.transfer_from(BORROWED_TOKEN, _callbacker, self, to_repay)
-
             tkn.transfer_from(BORROWED_TOKEN, _callbacker, msg.sender, crv_math.sub_or_zero(cb.borrowed, to_repay))
             tkn.transfer_from(COLLATERAL_TOKEN, _callbacker, msg.sender, cb.collateral)
     else:

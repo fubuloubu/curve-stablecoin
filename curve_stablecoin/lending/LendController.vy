@@ -187,7 +187,7 @@ def on_borrowed_token_transfer_in(_amount: uint256):
     """
     @notice Hook called by
             1. The controller on repay/liquidate
-            2. The vault on deposit
+            2. The vault on deposit/mint
     """
     assert msg.sender == VAULT.address or msg.sender == self # dev: vault or controller only
     self.available_balance += _amount
@@ -198,8 +198,8 @@ def on_borrowed_token_transfer_in(_amount: uint256):
 def on_borrowed_token_transfer_out(_amount: uint256):
     """
     @notice Hook called by
-            1. The controller on create/borrow/collect_fees
-            2. The vault on withdraw
+            1. The controller on create_loan/borrow_more/collect_fees
+            2. The vault on withdraw/redeem
     """
     assert msg.sender == VAULT.address or msg.sender == self # dev: vault or controller only
     assert _amount <= self.available_balance, "Available balance exceeded"
