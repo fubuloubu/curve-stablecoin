@@ -3,6 +3,7 @@ from hypothesis import strategies as st
 import boa
 import pytest
 from tests.utils import mint_for_testing
+from tests.utils.constants import DEAD_SHARES, MIN_SHARES_ALLOWED
 
 """
 Test that get_x_down and get_y_up don't change:
@@ -43,7 +44,7 @@ def test_immediate(
     collateral_decimals = collateral_token.decimals()
     borrowed_decimals = borrowed_token.decimals()
     deposit_amount = int(deposit_amount * 10**collateral_decimals)
-    deposit_amount = max(deposit_amount, dn + 1)
+    deposit_amount = max(deposit_amount, (dn + 1) * MIN_SHARES_ALLOWED // DEAD_SHARES)
     user = accounts[0]
     prices = []
     prices.append(amm.get_p())
