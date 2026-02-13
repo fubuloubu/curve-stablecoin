@@ -13,6 +13,7 @@ from hypothesis.stateful import (
 from hypothesis import Phase
 from tests.utils import mint_for_testing
 from tests.utils.deployers import ERC20_MOCK_DEPLOYER
+from tests.utils.constants import DEAD_SHARES, MIN_SHARES_ALLOWED
 
 
 class StatefulExchange(RuleBasedStateMachine):
@@ -34,13 +35,25 @@ class StatefulExchange(RuleBasedStateMachine):
         amounts = list(map(lambda x: int(x * 10**self.collateral_digits), amounts))
         for user, amount, n1, dn in zip(self.accounts, amounts, ns, dns):
             n2 = n1 + dn
+
+            y_per_band = amount // (dn + 1)
+            amount_too_low = y_per_band <= 100
+            for n in range(n1, n2 + 1):
+                if amount_too_low:
+                    break
+                total_y = self.amm.bands_y(n)
+                # Total / user share
+                s = self.amm.eval(f"self.total_shares[{n}]")
+                ds = ((s + DEAD_SHARES) * y_per_band) // (total_y + 1)
+                amount_too_low = amount_too_low or ds < MIN_SHARES_ALLOWED
+
             try:
                 with boa.env.prank(self.admin):
                     self.amm.deposit_range(user, amount, n1, n2)
                     mint_for_testing(self.collateral_token, self.amm.address, amount)
             except Exception as e:
                 if "Amount too low" in str(e):
-                    assert amount // (dn + 1) <= 100
+                    assert amount_too_low
                 else:
                     raise
         self.total_deposited = sum(self.amm.bands_y(n) for n in range(42))
