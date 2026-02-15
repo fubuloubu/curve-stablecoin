@@ -116,12 +116,14 @@ collected: uint256
 
 
 # Admin fees yet to be collected. Goes to zero when collected.
-admin_fees: public(uint256)
+_stored_admin_fees: uint256
 admin_percentage: public(uint256)
 
 # DANGER DO NOT RELY ON MSG.SENDER IN VIRTUAL METHODS
 interface VirtualMethods:
-    def _on_debt_increased(_delta: uint256, _total_debt: uint256): nonpayable
+    def _on_debt_increased(_total_debt: uint256): nonpayable
+    def on_borrowed_token_transfer_in(_amount: uint256): nonpayable
+    def on_borrowed_token_transfer_out(_amount: uint256): nonpayable
 
 implements: VirtualMethods
 
@@ -236,9 +238,16 @@ def _get_total_debt() -> uint256:
 
 
 @internal
-def _update_total_debt(
-    _d_debt: uint256, _rate_mul: uint256, _is_increase: bool
-) -> IController.Loan:
+@view
+def _preview_total_debt(_rate_mul: uint256, _loan: IController.Loan) -> (uint256, uint256):
+    loan_with_interest: uint256 = _loan.initial_debt * _rate_mul // _loan.rate_mul
+    accrued_interest: uint256 = loan_with_interest - _loan.initial_debt
+    accrued_admin_fees: uint256 = accrued_interest * self.admin_percentage // WAD
+    return (loan_with_interest, accrued_admin_fees)
+
+
+@internal
+def _update_total_debt(_d_debt: uint256, _rate_mul: uint256, _is_increase: bool) -> IController.Loan:
     """
     @notice Update total debt of this controller
     @dev This method MUST be called strictly BEFORE lent, repaid or collected change
@@ -247,18 +256,25 @@ def _update_total_debt(
     @param is_increase Whether debt increases or decreases
     """
     loan: IController.Loan = self._total_debt
-    loan_with_interest: uint256 = loan.initial_debt * _rate_mul // loan.rate_mul
-    accrued_interest: uint256 = loan_with_interest - loan.initial_debt
-    accrued_admin_fees: uint256 = accrued_interest * self.admin_percentage // WAD
-    self.admin_fees += accrued_admin_fees
+    loan_with_interest: uint256 = 0
+    accrued_admin_fees: uint256 = 0
+    loan_with_interest, accrued_admin_fees = self._preview_total_debt(
+        _rate_mul, loan
+    )
+    self._stored_admin_fees += accrued_admin_fees
     loan.initial_debt = loan_with_interest
     if _is_increase:
         loan.initial_debt += _d_debt
-        extcall VIRTUAL._on_debt_increased(_d_debt, loan.initial_debt)
     else:
         loan.initial_debt = crv_math.sub_or_zero(loan.initial_debt, _d_debt)
     loan.rate_mul = _rate_mul
     self._total_debt = loan
+
+    if _is_increase:
+        extcall VIRTUAL.on_borrowed_token_transfer_out(_d_debt)
+        extcall VIRTUAL._on_debt_increased(loan.initial_debt)
+    else:
+        extcall VIRTUAL.on_borrowed_token_transfer_in(_d_debt)
 
     return loan
 
@@ -920,8 +936,8 @@ def _repay_full(
         tkn.transfer_from(BORROWED_TOKEN, AMM.address, self, _xy[0])
     tkn.transfer_from(BORROWED_TOKEN, _callbacker, self, _cb.borrowed)
     tkn.transfer_from(BORROWED_TOKEN, msg.sender, self, wallet_d_debt)
-    tkn.transfer(BORROWED_TOKEN, _for, crv_math.sub_or_zero(non_wallet_d_debt, _debt))
 
+    tkn.transfer(BORROWED_TOKEN, _for, crv_math.sub_or_zero(non_wallet_d_debt, _debt))
 
     # ================= Recover collateral tokens (xy[1]) =================
     if _callbacker == empty(address):
@@ -1255,6 +1271,7 @@ def liquidate(
     assert xy[0] >= _min_x, "Slippage"
 
     min_amm_burn: uint256 = min(xy[0], debt)
+
     tkn.transfer_from(BORROWED_TOKEN, AMM.address, self, min_amm_burn)
 
     if debt > xy[0]:
@@ -1280,6 +1297,7 @@ def liquidate(
                 _calldata,
             )
             assert cb.borrowed >= to_repay, "no enough proceeds"
+
             tkn.transfer_from(BORROWED_TOKEN, _callbacker, self, to_repay)
             tkn.transfer_from(BORROWED_TOKEN, _callbacker, msg.sender, crv_math.sub_or_zero(cb.borrowed, to_repay))
             tkn.transfer_from(COLLATERAL_TOKEN, _callbacker, msg.sender, cb.collateral)
@@ -1474,22 +1492,35 @@ def set_callback(_cb: ILMGauge):
     log IController.SetLMCallback(callback=_cb)
 
 
+@internal
+@view
+def _admin_fees(_rate_mul: uint256) -> uint256:
+    return self._stored_admin_fees + self._preview_total_debt(_rate_mul, self._total_debt)[1]
+
+
+@external
+@view
+def admin_fees() -> uint256:
+    """
+    @notice Pending admin fees which can be claimed if the controller has enough balance
+    """
+    return self._stored_admin_fees + self._preview_total_debt(staticcall AMM.get_rate_mul(), self._total_debt)[1]
+
+
 @external
 def collect_fees() -> uint256:
     """
     @notice Collect the fees charged as interest.
     """
-    return self._collect_fees()
-
-
-@internal
-def _collect_fees() -> uint256:
     rate_mul: uint256 = staticcall AMM.get_rate_mul()
     self._update_total_debt(0, rate_mul, False)
 
-    pending_admin_fees: uint256 = self.admin_fees
+    # self._stored_admin_fees == self.admin_fees() after _update_total_debt
+    pending_admin_fees: uint256 = self._stored_admin_fees
     self.collected += pending_admin_fees
-    self.admin_fees = 0
+    self._stored_admin_fees = 0
+
+    extcall VIRTUAL.on_borrowed_token_transfer_out(pending_admin_fees)
     tkn.transfer(BORROWED_TOKEN, staticcall FACTORY.fee_receiver(), pending_admin_fees)
 
     self._save_rate()
@@ -1500,7 +1531,19 @@ def _collect_fees() -> uint256:
 
 @external
 @reentrant
-def _on_debt_increased(_delta: uint256, _total_debt: uint256):
+def on_borrowed_token_transfer_in(_amount: uint256):
+    pass
+
+
+@external
+@reentrant
+def on_borrowed_token_transfer_out(_amount: uint256):
+    pass
+
+
+@external
+@reentrant
+def _on_debt_increased(_total_debt: uint256):
     pass
 
 

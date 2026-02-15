@@ -72,8 +72,6 @@ def factory() -> IFactory:
 
 maxSupply: public(uint256)
 
-net_deposits: public(int256)
-
 # ERC20 publics
 
 decimals: public(constant(uint8)) = 18
@@ -176,8 +174,11 @@ def asset() -> IERC20:
 @internal
 @view
 def _total_assets() -> uint256:
-    # admin fee should be accounted for here when enabled
-    return staticcall ILendController(self._controller.address).available_balance() + staticcall self._controller.total_debt()
+    return (
+        staticcall ILendController(self._controller.address).available_balance()
+        + staticcall self._controller.total_debt()
+        - staticcall self._controller.admin_fees()
+    )
 
 
 @external
@@ -305,8 +306,10 @@ def deposit(_assets: uint256, _receiver: address = msg.sender) -> uint256:
     assert total_assets + _assets <= self.maxSupply, "Supply limit"
     to_mint: uint256 = self._convert_to_shares(_assets, True, total_assets)
     assert to_mint > 0, "Can't mint 0 shares"
+
+    extcall ILendController(controller.address).on_borrowed_token_transfer_in(_assets)
     tkn.transfer_from(self._borrowed_token, msg.sender, controller.address, _assets)
-    self.net_deposits += convert(_assets, int256)
+
     self._mint(_receiver, to_mint)
     extcall controller.save_rate()
     log IERC4626.Deposit(sender=msg.sender, owner=_receiver, assets=_assets, shares=to_mint)
@@ -351,8 +354,10 @@ def mint(_shares: uint256, _receiver: address = msg.sender) -> uint256:
     assets: uint256 = self._convert_to_assets(_shares, False, total_assets)
     assert total_assets + assets >= MIN_ASSETS, "Need more assets"
     assert total_assets + assets <= self.maxSupply, "Supply limit"
+
+    extcall ILendController(controller.address).on_borrowed_token_transfer_in(assets)
     tkn.transfer_from(self._borrowed_token, msg.sender, controller.address, assets)
-    self.net_deposits += convert(assets, int256)
+
     self._mint(_receiver, _shares)
     extcall controller.save_rate()
     log IERC4626.Deposit(sender=msg.sender, owner=_receiver, assets=assets, shares=_shares)
@@ -400,8 +405,10 @@ def withdraw(_assets: uint256, _receiver: address = msg.sender, _owner: address 
 
     controller: IController = self._controller
     self._burn(_owner, shares)
+
+    extcall ILendController(controller.address).on_borrowed_token_transfer_out(_assets)
     tkn.transfer_from(self._borrowed_token, controller.address, _receiver, _assets)
-    self.net_deposits -= convert(_assets, int256)
+
     extcall controller.save_rate()
     log IERC4626.Withdraw(sender=msg.sender, receiver=_receiver, owner=_owner, assets=_assets, shares=shares)
     return shares
@@ -453,8 +460,10 @@ def redeem(_shares: uint256, _receiver: address = msg.sender, _owner: address = 
             raise "Need more assets"
     self._burn(_owner, _shares)
     controller: IController = self._controller
+
+    extcall ILendController(controller.address).on_borrowed_token_transfer_out(assets_to_redeem)
     tkn.transfer_from(self._borrowed_token, controller.address, _receiver, assets_to_redeem)
-    self.net_deposits -= convert(assets_to_redeem, int256)
+
     extcall controller.save_rate()
     log IERC4626.Withdraw(sender=msg.sender, receiver=_receiver, owner=_owner, assets=assets_to_redeem, shares=_shares)
     return assets_to_redeem

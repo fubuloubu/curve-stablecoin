@@ -15,11 +15,10 @@ def amounts(collateral_token, borrowed_token):
 
 def snapshot(controller, vault):
     return {
-        "borrowed": controller.available_balance(),
+        "available_balance": controller.available_balance(),
         "lent": controller.lent(),
         "repaid": controller.repaid(),
         "collected": controller.collected(),
-        "asset_balance": vault.net_deposits(),
     }
 
 
@@ -36,8 +35,9 @@ def test_increases_after_deposit(controller, vault, borrowed_token, amounts):
     vault.deposit(amounts["deposit"])
     after = snapshot(controller, vault)
 
-    assert after["borrowed"] == before["borrowed"] + amounts["deposit"]
-    assert after["asset_balance"] == before["asset_balance"] + amounts["debt"]
+    assert (
+        after["available_balance"] == before["available_balance"] + amounts["deposit"]
+    )
     expect_same(before, after, "lent", "repaid", "collected")
 
 
@@ -56,8 +56,9 @@ def test_decreases_after_withdraw(
     vault.withdraw(amounts["deposit"])
     after = snapshot(controller, vault)
 
-    assert after["borrowed"] == before["borrowed"] - amounts["deposit"]
-    assert after["asset_balance"] == before["asset_balance"] - amounts["deposit"]
+    assert (
+        after["available_balance"] == before["available_balance"] - amounts["deposit"]
+    )
     expect_same(before, after, "lent", "repaid", "collected")
 
 
@@ -69,9 +70,9 @@ def test_decreases_after_create(controller, vault, collateral_token, amounts):
     controller.create_loan(amounts["collateral"], amounts["debt"], MIN_TICKS)
     after = snapshot(controller, vault)
 
-    assert after["borrowed"] == before["borrowed"] - amounts["debt"]
+    assert after["available_balance"] == before["available_balance"] - amounts["debt"]
     assert after["lent"] == before["lent"] + amounts["debt"]
-    expect_same(before, after, "repaid", "collected", "asset_balance")
+    expect_same(before, after, "repaid", "collected")
 
 
 def test_decreases_after_borrow_more(controller, vault, collateral_token, amounts):
@@ -83,9 +84,9 @@ def test_decreases_after_borrow_more(controller, vault, collateral_token, amount
     controller.borrow_more(amounts["collateral"], amounts["debt"])
     after = snapshot(controller, vault)
 
-    assert after["borrowed"] == before["borrowed"] - amounts["debt"]
+    assert after["available_balance"] == before["available_balance"] - amounts["debt"]
     assert after["lent"] == before["lent"] + amounts["debt"]
-    expect_same(before, after, "repaid", "collected", "asset_balance")
+    expect_same(before, after, "repaid", "collected")
 
 
 def test_increases_after_repay(
@@ -100,9 +101,9 @@ def test_increases_after_repay(
     controller.repay(amounts["debt"])
     after = snapshot(controller, vault)
 
-    assert after["borrowed"] == before["borrowed"] + amounts["debt"]
+    assert after["available_balance"] == before["available_balance"] + amounts["debt"]
     assert after["repaid"] == before["repaid"] + amounts["debt"]
-    expect_same(before, after, "lent", "collected", "asset_balance")
+    expect_same(before, after, "lent", "collected")
 
 
 def test_collect_fees_reduces_balance(
@@ -133,5 +134,5 @@ def test_collect_fees_reduces_balance(
 
     assert amount > 0
     assert after["collected"] == before["collected"] + amount
-    assert after["borrowed"] == before["borrowed"] - amount
-    expect_same(before, after, "lent", "repaid", "asset_balance")
+    assert after["available_balance"] == before["available_balance"] - amount
+    expect_same(before, after, "lent", "repaid")
