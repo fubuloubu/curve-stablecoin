@@ -111,6 +111,7 @@ def _check_approval(_for: address, _caller: address) -> bool:
 @internal
 @view
 def _calc_health(_x_eff: uint256, _debt: uint256, _ld: uint256) -> int256:
+    assert _debt > 0, "_debt = 0"
     health: int256 = SWAD - convert(_ld, int256)
     health = unsafe_div(convert(_x_eff, int256) * health, convert(_debt, int256)) - SWAD
 
