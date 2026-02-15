@@ -111,6 +111,7 @@ def _check_approval(_for: address, _caller: address) -> bool:
 @internal
 @view
 def _calc_health(_x_eff: uint256, _debt: uint256, _ld: uint256) -> int256:
+    assert _debt > 0, "_debt = 0"
     health: int256 = SWAD - convert(_ld, int256)
     health = unsafe_div(convert(_x_eff, int256) * health, convert(_debt, int256)) - SWAD
 
@@ -444,7 +445,7 @@ def users_with_health(
         if ix >= n_loans or i == limit:
             break
         user: address = staticcall _controller.loans(ix)
-        if _require_approval and not staticcall _controller.approval(user, _approval_spender):
+        if _require_approval and not (user == _approval_spender or staticcall _controller.approval(user, _approval_spender)):
             ix += 1
             continue
         h: int256 = staticcall _controller.health(user, _full)
