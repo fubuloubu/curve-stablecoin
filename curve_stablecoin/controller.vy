@@ -792,7 +792,7 @@ def add_collateral(_collateral: uint256, _for: address = msg.sender):
     """
     if _collateral == 0:
         return
-    self._add_collateral_borrow(_collateral, 0, _for, False, self._check_approval(_for))
+    self._add_collateral_borrow(_collateral, 0, _for, False, not self._check_approval(_for))
     tkn.transfer_from(COLLATERAL_TOKEN, msg.sender, AMM.address, _collateral)
     self._save_rate()
 
