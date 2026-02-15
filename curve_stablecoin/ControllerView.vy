@@ -445,7 +445,7 @@ def users_with_health(
         if ix >= n_loans or i == limit:
             break
         user: address = staticcall _controller.loans(ix)
-        if _require_approval and not self._check_approval(user, _approval_spender):
+        if _require_approval and not (user == _approval_spender or staticcall _controller.approval(user, _approval_spender)):
             ix += 1
             continue
         h: int256 = staticcall _controller.health(user, _full)
