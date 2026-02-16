@@ -71,6 +71,8 @@ def users_to_liquidate(_controller: IController, _from: uint256 = 0, _limit: uin
         to_repay: uint256 = staticcall CONTROLLER.tokens_to_liquidate(pos.user, FRAC)
         x_down: uint256 = self._x_down(CONTROLLER, pos.user)
         ratio: uint256 = unsafe_div(unsafe_mul(x_down, WAD), pos.debt)
+        if ratio < WAD:
+            continue  # Skip positions that would fail ration check
         out.append(
             IZap.Position(
                 user=pos.user,
