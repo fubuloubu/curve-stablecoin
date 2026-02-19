@@ -11,6 +11,7 @@
 from curve_std.interfaces import IERC20
 from curve_stablecoin.interfaces import IAMM
 from curve_stablecoin.interfaces import IController
+from curve_stablecoin.interfaces import IControllerFactory
 from curve_stablecoin import controller as ctrl
 from curve_stablecoin import ControllerView as view
 from curve_std import token as tkn
@@ -23,6 +24,7 @@ implements: IZap
 # https://github.com/vyperlang/vyper/issues/4723
 WAD: constant(uint256) = c.WAD
 
+factories: public(DynArray[IControllerFactory, 5])
 FRAC: public(immutable(uint256))                         # fraction of position to repay (1e18 = 100%)
 HEALTH_THRESHOLD: public(immutable(int256))              # trigger threshold on controller.health(user, false)
 
@@ -32,9 +34,11 @@ CALLBACK_SIGNATURE: constant(bytes4) = method_id("callback_liquidate_partial(byt
 
 @deploy
 def __init__(
+        _factories: DynArray[IControllerFactory, 5],
         _frac: uint256,                       # e.g. 5e16 == 5%
         _health_threshold: int256,            # e.g. 1e16 == 1%
     ):
+    self.factories = _factories
     FRAC = _frac
     HEALTH_THRESHOLD = _health_threshold
 
@@ -49,16 +53,21 @@ def _x_down(_controller: IController, _user: address) -> uint256:
 
 @external
 @view
-def users_to_liquidate(_controller: IController, _from: uint256 = 0, _limit: uint256 = 0) -> DynArray[IZap.Position, 1000]:
+def users_to_liquidate(
+    _f_idx: uint256,
+    _c_idx: uint256,
+    _from: uint256 = 0,
+    _limit: uint256 = 0,
+) -> DynArray[IZap.Position, 1000]:
     """
     @notice Returns users eligible for partial self-liquidation through this zap.
-    @param _controller Address of the controller
+    @param _f_idx Index of the factory in `factories`
+    @param _c_idx Index of the controller in the factory
     @param _from Loan index to start iteration from
     @param _limit Number of loans to inspect (0 = all)
     @return Dynamic array with position info and zap-specific estimates
     """
-    # Cached only for readability purposes
-    CONTROLLER: IController = _controller
+    CONTROLLER: IController = IController(staticcall self.factories[_f_idx].controllers(_c_idx))
 
     base_positions: DynArray[IController.Position, 1000] = view.users_with_health(
         CONTROLLER, _from, _limit, HEALTH_THRESHOLD, True, self, False
@@ -88,7 +97,8 @@ def users_to_liquidate(_controller: IController, _from: uint256 = 0, _limit: uin
 
 @external
 def liquidate_partial(
-    _controller: IController,
+    _f_idx: uint256,
+    _c_idx: uint256,
     _user: address,
     _min_x: uint256,
     _callbacker: address = empty(address),
@@ -97,14 +107,14 @@ def liquidate_partial(
     """
     @notice Trigger partial self-liquidation of `user` using FRAC.
             Caller supplies borrowed tokens; receives withdrawn collateral.
-    @param _controller Address of the controller
+    @param _f_idx Index of the factory in `factories`
+    @param _c_idx Index of the controller in the factory
     @param _user Address of the position owner (must have approved this zap in controller)
     @param _min_x Minimal x withdrawn from AMM to guard against MEV
     @param _callbacker Address of the callback contract
     @param _calldata Any data for callbacker (address x 3 (64) + uint256 (32) + 2 * offset (32) + must be divided by 32 - slots (16))
     """
-    # Cached only for readability purposes
-    CONTROLLER: IController = _controller
+    CONTROLLER: IController = IController(staticcall self.factories[_f_idx].controllers(_c_idx))
 
     BORROWED: IERC20 = staticcall CONTROLLER.borrowed_token()
     COLLATERAL: IERC20 = staticcall CONTROLLER.collateral_token()
@@ -125,7 +135,7 @@ def liquidate_partial(
     borrowed_from_sender: uint256 = unsafe_div(unsafe_mul(to_repay, ratio), WAD)
 
     if _callbacker != empty(address):
-        liquidate_calldata: Bytes[CALLDATA_MAX_SIZE] = abi_encode(_controller.address, _user, borrowed_from_sender, _callbacker, _calldata)
+        liquidate_calldata: Bytes[CALLDATA_MAX_SIZE] = abi_encode(CONTROLLER.address, _user, borrowed_from_sender, _callbacker, _calldata)
         extcall CONTROLLER.liquidate(_user, _min_x, FRAC, self, liquidate_calldata)
 
     else:
@@ -140,7 +150,7 @@ def liquidate_partial(
     extcall CONTROLLER.repay(borrowed_amount, _user)
 
     log IZap.PartialRepay(
-        controller=_controller,
+        controller=CONTROLLER,
         user=_user,
         borrowed_from_sender=borrowed_from_sender,
         surplus_repaid=borrowed_amount,

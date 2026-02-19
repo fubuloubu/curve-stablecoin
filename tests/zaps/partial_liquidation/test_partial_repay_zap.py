@@ -6,20 +6,41 @@ from eth_utils import to_bytes
 from tests.utils.constants import MAX_UINT256
 
 
+def _get_zap_indices(market_type, mint_factory, factory, controller):
+    controller_address = controller.address
+    if market_type == "mint":
+        for i in range(mint_factory.n_collaterals()):
+            if mint_factory.controllers(i) == controller_address:
+                return 0, i
+    else:
+        for i in range(factory.market_count()):
+            market = factory.markets(i)
+            market_controller = (
+                market.controller if hasattr(market, "controller") else market[1]
+            )
+            if market_controller == controller_address:
+                return 0, i
+    raise ValueError("Controller index not found in selected factory")
+
+
 @pytest.mark.parametrize("is_approved", [True, False])
 def test_users_to_liquidate_callback(
     controller_for_liquidation,
     accounts,
     partial_repay_zap,
+    market_type,
+    mint_factory,
+    factory,
     is_approved,
 ):
     user = accounts[1]
     controller = controller_for_liquidation(sleep_time=int(33 * 86400), user=user)
+    f_idx, c_idx = _get_zap_indices(market_type, mint_factory, factory, controller)
 
     if is_approved:
         controller.approve(partial_repay_zap.address, True, sender=user)
 
-    users_to_liquidate = partial_repay_zap.users_to_liquidate(controller.address)
+    users_to_liquidate = partial_repay_zap.users_to_liquidate(f_idx, c_idx)
 
     if not is_approved:
         assert users_to_liquidate == []
@@ -33,10 +54,14 @@ def test_liquidate_partial(
     controller_for_liquidation,
     accounts,
     partial_repay_zap,
+    market_type,
+    mint_factory,
+    factory,
 ):
     user = accounts[1]
     liquidator = accounts[2]
     controller = controller_for_liquidation(sleep_time=int(30.7 * 86400), user=user)
+    f_idx, c_idx = _get_zap_indices(market_type, mint_factory, factory, controller)
     someone_else = str(partial_repay_zap.address)
     controller.approve(someone_else, True, sender=user)
 
@@ -47,7 +72,7 @@ def test_liquidate_partial(
     boa.deal(borrowed_token, liquidator, 1000 * 10 ** borrowed_token.decimals())
     with boa.env.prank(liquidator):
         borrowed_token.approve(partial_repay_zap.address, 2**256 - 1)
-        partial_repay_zap.liquidate_partial(controller.address, user, 0)
+        partial_repay_zap.liquidate_partial(f_idx, c_idx, user, 0)
 
     h = controller.health(user) / 10**16
     assert h > 1
@@ -60,12 +85,16 @@ def test_liquidate_partial_callback(
     accounts,
     partial_repay_zap,
     partial_repay_zap_tester,
+    market_type,
+    mint_factory,
+    factory,
 ):
     calldata = to_bytes(hexstr=borrowed_token.address)
 
     user = accounts[1]
     liquidator = accounts[2]
     controller = controller_for_liquidation(sleep_time=int(30.7 * 86400), user=user)
+    f_idx, c_idx = _get_zap_indices(market_type, mint_factory, factory, controller)
     controller.approve(partial_repay_zap.address, True, sender=user)
 
     initial_health = controller.health(user)
@@ -78,7 +107,7 @@ def test_liquidate_partial_callback(
     with boa.env.prank(liquidator):
         borrowed_token.approve(partial_repay_zap.address, 2**256 - 1)
         partial_repay_zap.liquidate_partial(
-            controller.address, user, 0, partial_repay_zap_tester.address, calldata
+            f_idx, c_idx, user, 0, partial_repay_zap_tester.address, calldata
         )
 
     final_health = controller.health(user)
@@ -98,14 +127,18 @@ def test_liquidate_partial_uses_exact_amount(
     controller_for_liquidation,
     partial_repay_zap,
     partial_repay_zap_tester,
+    market_type,
+    mint_factory,
+    factory,
     use_callback,
 ):
     user = accounts[1]
     liquidator = accounts[2]
     controller = controller_for_liquidation(sleep_time=int(30.7 * 86400), user=user)
+    f_idx, c_idx = _get_zap_indices(market_type, mint_factory, factory, controller)
     controller.approve(partial_repay_zap.address, True, sender=user)
 
-    position = partial_repay_zap.users_to_liquidate(controller.address)[0]
+    position = partial_repay_zap.users_to_liquidate(f_idx, c_idx)[0]
     borrowed_from_sender = position.dy
 
     if use_callback:
@@ -120,7 +153,7 @@ def test_liquidate_partial_uses_exact_amount(
         with boa.env.prank(liquidator):
             borrowed_token.approve(partial_repay_zap.address, 2**256 - 1)
             partial_repay_zap.liquidate_partial(
-                controller.address, user, 0, partial_repay_zap_tester.address, calldata
+                f_idx, c_idx, user, 0, partial_repay_zap_tester.address, calldata
             )
 
         post_balance = borrowed_token.balanceOf(partial_repay_zap_tester)
@@ -131,7 +164,7 @@ def test_liquidate_partial_uses_exact_amount(
         pre_balance = borrowed_token.balanceOf(liquidator)
         with boa.env.prank(liquidator):
             borrowed_token.approve(partial_repay_zap.address, MAX_UINT256)
-            partial_repay_zap.liquidate_partial(controller.address, user, 0)
+            partial_repay_zap.liquidate_partial(f_idx, c_idx, user, 0)
         post_balance = borrowed_token.balanceOf(liquidator)
 
     spent = pre_balance - post_balance

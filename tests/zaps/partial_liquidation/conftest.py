@@ -1,15 +1,22 @@
 import boa
 import pytest
-
 from tests.utils.deployers import (
-    PARTIAL_REPAY_ZAP_DEPLOYER,
+    PARTIAL_REPAY_ZAP_LENDING_DEPLOYER,
+    PARTIAL_REPAY_ZAP_MINT_DEPLOYER,
 )
 
 
 @pytest.fixture(scope="module")
-def partial_repay_zap(admin):
+def partial_repay_zap(admin, market_type, mint_factory, factory):
     with boa.env.prank(admin):
-        return PARTIAL_REPAY_ZAP_DEPLOYER.deploy(20 * 10**16, 1 * 10**16)
+        if market_type == "mint":
+            return PARTIAL_REPAY_ZAP_MINT_DEPLOYER.deploy(
+                [mint_factory.address], 20 * 10**16, 1 * 10**16
+            )
+        else:
+            return PARTIAL_REPAY_ZAP_LENDING_DEPLOYER.deploy(
+                [factory.address], 20 * 10**16, 1 * 10**16
+            )
 
 
 @pytest.fixture(scope="module")

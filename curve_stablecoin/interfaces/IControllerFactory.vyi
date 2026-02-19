@@ -1,0 +1,178 @@
+from curve_std.interfaces import IERC20
+
+
+event AddMarket:
+    collateral: indexed(address)
+    controller: address
+    amm: address
+    monetary_policy: address
+    ix: uint256
+
+
+event SetDebtCeiling:
+    addr: indexed(address)
+    debt_ceiling: uint256
+
+
+event MintForMarket:
+    addr: indexed(address)
+    amount: uint256
+
+
+event RemoveFromMarket:
+    addr: indexed(address)
+    amount: uint256
+
+
+event SetImplementations:
+    amm: address
+    controller: address
+
+
+event SetAdmin:
+    admin: address
+
+
+event SetFeeReceiver:
+    fee_receiver: address
+
+
+@view
+@external
+def controllers(arg0: uint256) -> address:
+    ...
+
+
+@view
+@external
+def amms(arg0: uint256) -> address:
+    ...
+
+
+@view
+@external
+def admin() -> address:
+    ...
+
+
+@view
+@external
+def fee_receiver() -> address:
+    ...
+
+
+@view
+@external
+def controller_implementation() -> address:
+    ...
+
+
+@view
+@external
+def amm_implementation() -> address:
+    ...
+
+
+@view
+@external
+def n_collaterals() -> uint256:
+    ...
+
+
+@view
+@external
+def collaterals(arg0: uint256) -> address:
+    ...
+
+
+@view
+@external
+def collaterals_index(arg0: address, arg1: uint256) -> uint256:
+    ...
+
+
+@view
+@external
+def debt_ceiling(arg0: address) -> uint256:
+    ...
+
+
+@view
+@external
+def debt_ceiling_residual(arg0: address) -> uint256:
+    ...
+
+
+@view
+@external
+def WETH() -> address:
+    ...
+
+
+@view
+@external
+def stablecoin() -> IERC20:
+    ...
+
+
+@external
+def add_market(
+    token: address,
+    A: uint256,
+    fee: uint256,
+    admin_fee: uint256,
+    _price_oracle_contract: address,
+    monetary_policy: address,
+    loan_discount: uint256,
+    liquidation_discount: uint256,
+    debt_ceiling: uint256,
+) -> address[2]:
+    ...
+
+
+@view
+@external
+def total_debt() -> uint256:
+    ...
+
+
+@view
+@external
+def get_controller(collateral: address, i: uint256 = 0) -> address:
+    ...
+
+
+@view
+@external
+def get_amm(collateral: address, i: uint256 = 0) -> address:
+    ...
+
+
+@external
+def set_implementations(controller: address, amm: address):
+    ...
+
+
+@external
+def set_admin(admin: address):
+    ...
+
+
+@external
+def set_fee_receiver(fee_receiver: address):
+    ...
+
+
+@external
+def set_debt_ceiling(_to: address, debt_ceiling: uint256):
+    ...
+
+
+@external
+def rug_debt_ceiling(_to: address):
+    ...
+
+
+@external
+def collect_fees_above_ceiling(_to: address):
+    ...

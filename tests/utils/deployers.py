@@ -86,8 +86,12 @@ FLASH_LENDER_DEPLOYER = boa.load_partial(
     FLASHLOAN_CONTRACT_PATH / "FlashLender.vy", compiler_args=compiler_args_default
 )
 
-PARTIAL_REPAY_ZAP_DEPLOYER = boa.load_partial(
-    ZAPS_CONTRACT_PATH / "PartialRepayZap.vy",
+PARTIAL_REPAY_ZAP_MINT_DEPLOYER = boa.load_partial(
+    ZAPS_CONTRACT_PATH / "PartialRepayZapMint.vy",
+    compiler_args=compiler_args_default,
+)
+PARTIAL_REPAY_ZAP_LENDING_DEPLOYER = boa.load_partial(
+    ZAPS_CONTRACT_PATH / "PartialRepayZapLending.vy",
     compiler_args=compiler_args_default,
 )
 

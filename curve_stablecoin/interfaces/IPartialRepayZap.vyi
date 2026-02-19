@@ -22,14 +22,21 @@ struct Position:
 
 @view
 @external
-def users_to_liquidate(_controller: IController, _from: uint256, _limit: uint256) -> DynArray[Position, 1000]:
+def users_to_liquidate(
+    _f_idx: uint256,
+    _c_idx: uint256,
+    _from: uint256 = 0,
+    _limit: uint256 = 0,
+) -> DynArray[Position, 1000]:
     ...
 
 
 @external
 def liquidate_partial(
-    _controller: IController,
-    _user: address, _min_x: uint256,
+    _f_idx: uint256,
+    _c_idx: uint256,
+    _user: address,
+    _min_x: uint256,
     _callbacker: address = empty(address),
     _calldata: Bytes[CALLDATA_MAX_SIZE - 32 * 6] = b"",
 ):
