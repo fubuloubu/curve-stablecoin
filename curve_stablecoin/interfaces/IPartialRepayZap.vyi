@@ -38,7 +38,7 @@ def liquidate_partial(
     _user: address,
     _min_x: uint256,
     _callbacker: address = empty(address),
-    _calldata: Bytes[CALLDATA_MAX_SIZE - 32 * 6] = b"",
+    _calldata: Bytes[CALLDATA_MAX_SIZE - 32 * 7] = b"",
 ):
     ...
 
