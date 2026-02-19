@@ -3,20 +3,13 @@ import pytest
 
 from tests.utils.deployers import (
     PARTIAL_REPAY_ZAP_DEPLOYER,
-    PARTIAL_REPAY_ZAP_CALLBACK_DEPLOYER,
 )
 
 
 @pytest.fixture(scope="module")
 def partial_repay_zap(admin):
     with boa.env.prank(admin):
-        return PARTIAL_REPAY_ZAP_DEPLOYER.deploy(5 * 10**16, 1 * 10**16)
-
-
-@pytest.fixture(scope="module")
-def partial_repay_zap_callback(admin):
-    with boa.env.prank(admin):
-        return PARTIAL_REPAY_ZAP_CALLBACK_DEPLOYER.deploy(20 * 10**16, 1 * 10**16)
+        return PARTIAL_REPAY_ZAP_DEPLOYER.deploy(20 * 10**16, 1 * 10**16)
 
 
 @pytest.fixture(scope="module")
