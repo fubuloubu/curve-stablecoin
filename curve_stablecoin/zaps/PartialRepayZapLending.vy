@@ -103,7 +103,7 @@ def liquidate_partial(
     _user: address,
     _min_x: uint256,
     _callbacker: address = empty(address),
-    _calldata: Bytes[CALLDATA_MAX_SIZE - 32 * 7] = b"",
+    _calldata: Bytes[CALLDATA_MAX_SIZE - 32 * 6] = b"",
 ):
     """
     @notice Trigger partial self-liquidation of `user` using FRAC.
@@ -137,7 +137,7 @@ def liquidate_partial(
     borrowed_from_sender: uint256 = unsafe_div(unsafe_mul(to_repay, ratio), WAD)
 
     if _callbacker != empty(address):
-        liquidate_calldata: Bytes[CALLDATA_MAX_SIZE] = abi_encode(_f_idx, _c_idx, _user, borrowed_from_sender, _callbacker, _calldata)
+        liquidate_calldata: Bytes[CALLDATA_MAX_SIZE] = abi_encode(_f_idx, _c_idx, borrowed_from_sender, _callbacker, _calldata)
         extcall CONTROLLER.liquidate(_user, _min_x, FRAC, self, liquidate_calldata)
 
     else:
@@ -163,7 +163,7 @@ def liquidate_partial(
 def execute_callback(
     callbacker: address,
     callback_sig: bytes4,
-    calldata: Bytes[CALLDATA_MAX_SIZE - 32 * 7],
+    calldata: Bytes[CALLDATA_MAX_SIZE - 32 * 6],
 ):
     response: Bytes[64] = raw_call(
         callbacker,
@@ -190,12 +190,11 @@ def callback_liquidate(
     """
     f_idx: uint256 = 0
     c_idx: uint256 = 0
-    user: address = empty(address)
     borrowed_from_sender: uint256 = 0
     callbacker: address = empty(address)
-    callbacker_calldata: Bytes[CALLDATA_MAX_SIZE - 32 * 7] = empty(Bytes[CALLDATA_MAX_SIZE - 32 * 7])
+    callbacker_calldata: Bytes[CALLDATA_MAX_SIZE - 32 * 6] = empty(Bytes[CALLDATA_MAX_SIZE - 32 * 6])
 
-    f_idx, c_idx, user, borrowed_from_sender, callbacker, callbacker_calldata = abi_decode(_calldata, (uint256, uint256, address, uint256, address, Bytes[CALLDATA_MAX_SIZE - 32 * 7]))
+    f_idx, c_idx, borrowed_from_sender, callbacker, callbacker_calldata = abi_decode(_calldata, (uint256, uint256, uint256, address, Bytes[CALLDATA_MAX_SIZE - 32 * 6]))
 
     factory: ILendFactory = self.factories[f_idx]
     contract_info: ILendFactory.ContractInfo = staticcall factory.check_contract(msg.sender)
