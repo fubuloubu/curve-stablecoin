@@ -109,7 +109,7 @@ def test_liquidate_partial_callback(
     controller = controller_for_liquidation(sleep_time=int(30.7 * 86400), user=user)
     c_idx = _get_zap_indices(market_type, mint_factory, factory, controller)
     controller.approve(partial_repay_zap.address, True, sender=user)
-    borrowed_from_sender = partial_repay_zap.users_to_liquidate(c_idx)[0].dy
+    borrowed_from_sender = partial_repay_zap.users_to_liquidate(c_idx)[0].dx
     calldata = _make_exchange_calldata(
         collateral_token, borrowed_token, borrowed_from_sender
     )
@@ -157,7 +157,7 @@ def test_liquidate_partial_uses_exact_amount(
     controller.approve(partial_repay_zap.address, True, sender=user)
 
     position = partial_repay_zap.users_to_liquidate(c_idx)[0]
-    borrowed_from_sender = position.dy
+    borrowed_from_sender = position.dx
 
     if use_callback:
         calldata = _make_exchange_calldata(

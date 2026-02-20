@@ -154,6 +154,7 @@ def _liquidate_partial(
     tkn.max_approve(BORROWED, _controller.address)
 
     total_debt: uint256 = staticcall _controller.debt(_user)
+    initial_x: uint256 = (staticcall _controller.user_state(_user))[1]
     x_down: uint256 = self._x_down(_controller, _user)
     ratio: uint256 = unsafe_div(unsafe_mul(x_down, WAD), total_debt)
 
@@ -171,8 +172,13 @@ def _liquidate_partial(
         tkn.transfer_from(BORROWED, msg.sender, self, borrowed_from_sender)
         extcall _controller.liquidate(_user, _min_x, FRAC)
 
+    # to_repay is not accurate - can be different between view and actual
+    debt_diff: uint256 = total_debt - staticcall _controller.debt(_user)
+    new_x: uint256 = (staticcall _controller.user_state(_user))[1]
+    paid_by_sender: uint256 = debt_diff - (initial_x - new_x)
+
     # surplus borrowed amount goes into position repay
-    surplus_repaid: uint256 = borrowed_from_sender - to_repay
+    surplus_repaid: uint256 = borrowed_from_sender - paid_by_sender
     extcall _controller.repay(surplus_repaid, _user)
 
     tkn.transfer(BORROWED, msg.sender, staticcall BORROWED.balanceOf(self))
