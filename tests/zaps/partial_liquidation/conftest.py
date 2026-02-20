@@ -11,11 +11,11 @@ def partial_repay_zap(admin, market_type, mint_factory, factory):
     with boa.env.prank(admin):
         if market_type == "mint":
             return PARTIAL_REPAY_ZAP_MINT_DEPLOYER.deploy(
-                [mint_factory.address], 20 * 10**16, 1 * 10**16
+                mint_factory.address, 20 * 10**16, 1 * 10**16
             )
         else:
             return PARTIAL_REPAY_ZAP_LENDING_DEPLOYER.deploy(
-                [factory.address], 20 * 10**16, 1 * 10**16
+                factory.address, 20 * 10**16, 1 * 10**16
             )
 
 
