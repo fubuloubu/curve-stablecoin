@@ -34,11 +34,11 @@ CALLBACK_SIGNATURE: constant(bytes4) = method_id("callback_liquidate_partial(byt
 
 @deploy
 def __init__(
-        _factory: ILendFactory,
+        _factory: address,
         _frac: uint256,                       # e.g. 5e16 == 5%
         _health_threshold: int256,            # e.g. 1e16 == 1%
     ):
-    _LEND_FACTORY = _factory
+    _LEND_FACTORY = ILendFactory(_factory)
     FRAC = _frac
     HEALTH_THRESHOLD = _health_threshold
 
@@ -73,12 +73,12 @@ def _check_controller(_c_idx: uint256) -> IController:
     return IController(msg.sender)
 
 
-@external
+@internal
 @view
-def users_to_liquidate(
-    _c_idx: uint256,
-    _from: uint256 = 0,
-    _limit: uint256 = 0,
+def _users_to_liquidate(
+    _controller: IController,
+    _from: uint256,
+    _limit: uint256,
 ) -> DynArray[IZap.Position, 1000]:
     """
     @notice Returns users eligible for partial self-liquidation through this zap.
@@ -87,18 +87,16 @@ def users_to_liquidate(
     @param _limit Number of loans to inspect (0 = all)
     @return Dynamic array with position info and zap-specific estimates
     """
-    CONTROLLER: IController = self._get_controller(_c_idx)
-
     base_positions: DynArray[IController.Position, 1000] = view.users_with_health(
-        CONTROLLER, _from, _limit, HEALTH_THRESHOLD, True, self, False
+        _controller, _from, _limit, HEALTH_THRESHOLD, True, self, False
     )
     out: DynArray[IZap.Position, 1000] = []
     for i: uint256 in range(1000):
         if i == len(base_positions):
             break
         pos: IController.Position = base_positions[i]
-        to_repay: uint256 = staticcall CONTROLLER.tokens_to_liquidate(pos.user, FRAC)
-        x_down: uint256 = self._x_down(CONTROLLER, pos.user)
+        to_repay: uint256 = staticcall _controller.tokens_to_liquidate(pos.user, FRAC)
+        x_down: uint256 = self._x_down(_controller, pos.user)
         ratio: uint256 = unsafe_div(unsafe_mul(x_down, WAD), pos.debt)
         if ratio < WAD:
             continue  # Skip positions that would fail ration check
@@ -116,7 +114,22 @@ def users_to_liquidate(
 
 
 @external
-def liquidate_partial(
+@view
+def users_to_liquidate(
+    _c_idx: uint256,
+    _from: uint256 = 0,
+    _limit: uint256 = 0,
+) -> DynArray[IZap.Position, 1000]:
+    return self._users_to_liquidate(
+        self._get_controller(_c_idx),
+        _from,
+        _limit,
+    )
+
+
+@internal
+def _liquidate_partial(
+    _controller: IController,
     _c_idx: uint256,
     _user: address,
     _min_x: uint256,
@@ -132,46 +145,62 @@ def liquidate_partial(
     @param _callbacker Address of the exchange/router contract
     @param _calldata Calldata for the exchange/router contract call
     """
-    CONTROLLER: IController = self._get_controller(_c_idx)
+    BORROWED: IERC20 = staticcall _controller.borrowed_token()
+    COLLATERAL: IERC20 = staticcall _controller.collateral_token()
 
-    BORROWED: IERC20 = staticcall CONTROLLER.borrowed_token()
-    COLLATERAL: IERC20 = staticcall CONTROLLER.collateral_token()
+    assert staticcall _controller.approval(_user, self), "not approved"
+    assert staticcall _controller.health(_user, False) < HEALTH_THRESHOLD, "health too high"
 
-    assert staticcall CONTROLLER.approval(_user, self), "not approved"
-    assert staticcall CONTROLLER.health(_user, False) < HEALTH_THRESHOLD, "health too high"
+    tkn.max_approve(BORROWED, _controller.address)
 
-    tkn.max_approve(BORROWED, CONTROLLER.address)
-
-    total_debt: uint256 = staticcall CONTROLLER.debt(_user)
-    x_down: uint256 = self._x_down(CONTROLLER, _user)
+    total_debt: uint256 = staticcall _controller.debt(_user)
+    x_down: uint256 = self._x_down(_controller, _user)
     ratio: uint256 = unsafe_div(unsafe_mul(x_down, WAD), total_debt)
 
     assert ratio > WAD, "position rekt"
 
     # Amount of borrowed token the liquidator must supply
-    to_repay: uint256 = staticcall CONTROLLER.tokens_to_liquidate(_user, FRAC)
+    to_repay: uint256 = staticcall _controller.tokens_to_liquidate(_user, FRAC)
     borrowed_from_sender: uint256 = unsafe_div(unsafe_mul(to_repay, ratio), WAD)
 
     if _callbacker != empty(address):
         liquidate_calldata: Bytes[CALLDATA_MAX_SIZE] = abi_encode(_c_idx, borrowed_from_sender, _callbacker, _calldata)
-        extcall CONTROLLER.liquidate(_user, _min_x, FRAC, self, liquidate_calldata)
+        extcall _controller.liquidate(_user, _min_x, FRAC, self, liquidate_calldata)
 
     else:
         tkn.transfer_from(BORROWED, msg.sender, self, borrowed_from_sender)
-        extcall CONTROLLER.liquidate(_user, _min_x, FRAC)
+        extcall _controller.liquidate(_user, _min_x, FRAC)
 
     # surplus borrowed amount goes into position repay
     surplus_repaid: uint256 = borrowed_from_sender - to_repay
-    extcall CONTROLLER.repay(surplus_repaid, _user)
+    extcall _controller.repay(surplus_repaid, _user)
 
     tkn.transfer(BORROWED, msg.sender, staticcall BORROWED.balanceOf(self))
     tkn.transfer(COLLATERAL, msg.sender, staticcall COLLATERAL.balanceOf(self))
 
     log IZap.PartialRepay(
-        controller=CONTROLLER,
+        controller=_controller,
         user=_user,
         borrowed_from_sender=borrowed_from_sender,
         surplus_repaid=surplus_repaid,
+    )
+
+
+@external
+def liquidate_partial(
+    _c_idx: uint256,
+    _user: address,
+    _min_x: uint256,
+    _callbacker: address = empty(address),
+    _calldata: Bytes[CALLDATA_MAX_SIZE - 32 * 5] = b"",
+):
+    self._liquidate_partial(
+        self._get_controller(_c_idx),
+        _c_idx,
+        _user,
+        _min_x,
+        _callbacker,
+        _calldata,
     )
 
 
