@@ -1,9 +1,19 @@
 import boa
 import pytest
 
-from eth_utils import to_bytes
+from eth_abi import encode
+from eth_utils import function_signature_to_4byte_selector
 
 from tests.utils.constants import MAX_UINT256
+
+
+def _make_exchange_calldata(collateral_token, borrowed_token, borrowed_from_sender):
+    return function_signature_to_4byte_selector(
+        "callback_liquidate_partial(address,address,uint256)"
+    ) + encode(
+        ["address", "address", "uint256"],
+        [collateral_token.address, borrowed_token.address, borrowed_from_sender],
+    )
 
 
 def _get_zap_indices(market_type, mint_factory, factory, controller):
@@ -94,13 +104,15 @@ def test_liquidate_partial_callback(
     mint_factory,
     factory,
 ):
-    calldata = to_bytes(hexstr=borrowed_token.address)
-
     user = accounts[1]
     liquidator = accounts[2]
     controller = controller_for_liquidation(sleep_time=int(30.7 * 86400), user=user)
     c_idx = _get_zap_indices(market_type, mint_factory, factory, controller)
     controller.approve(partial_repay_zap.address, True, sender=user)
+    borrowed_from_sender = partial_repay_zap.users_to_liquidate(c_idx)[0].dy
+    calldata = _make_exchange_calldata(
+        collateral_token, borrowed_token, borrowed_from_sender
+    )
 
     initial_health = controller.health(user)
 
@@ -129,6 +141,7 @@ def test_liquidate_partial_callback(
 def test_liquidate_partial_uses_exact_amount(
     accounts,
     borrowed_token,
+    collateral_token,
     controller_for_liquidation,
     partial_repay_zap,
     partial_repay_zap_tester,
@@ -147,7 +160,11 @@ def test_liquidate_partial_uses_exact_amount(
     borrowed_from_sender = position.dy
 
     if use_callback:
-        calldata = to_bytes(hexstr=borrowed_token.address)
+        calldata = _make_exchange_calldata(
+            collateral_token,
+            borrowed_token,
+            borrowed_from_sender,
+        )
         boa.deal(
             borrowed_token,
             partial_repay_zap_tester,

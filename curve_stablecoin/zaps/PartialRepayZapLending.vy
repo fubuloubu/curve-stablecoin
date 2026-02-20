@@ -129,8 +129,8 @@ def liquidate_partial(
     @param _c_idx Index of the market in the factory
     @param _user Address of the position owner (must have approved this zap in controller)
     @param _min_x Minimal x withdrawn from AMM to guard against MEV
-    @param _callbacker Address of the callback contract
-    @param _calldata Any data for callbacker (address x 3 (64) + uint256 (32) + 2 * offset (32) + must be divided by 32 - slots (16))
+    @param _callbacker Address of the exchange/router contract
+    @param _calldata Calldata for the exchange/router contract call
     """
     CONTROLLER: IController = self._get_controller(_c_idx)
 
@@ -158,36 +158,20 @@ def liquidate_partial(
 
     else:
         tkn.transfer_from(BORROWED, msg.sender, self, borrowed_from_sender)
-
         extcall CONTROLLER.liquidate(_user, _min_x, FRAC)
-        collateral_received: uint256 = staticcall COLLATERAL.balanceOf(self)
-        tkn.transfer(COLLATERAL, msg.sender, collateral_received)
 
-    # surplus amount goes into position repay
-    borrowed_amount: uint256 = staticcall BORROWED.balanceOf(self)
-    extcall CONTROLLER.repay(borrowed_amount, _user)
+    # surplus borrowed amount goes into position repay
+    surplus_repaid: uint256 = borrowed_from_sender - to_repay
+    extcall CONTROLLER.repay(surplus_repaid, _user)
+
+    tkn.transfer(BORROWED, msg.sender, staticcall BORROWED.balanceOf(self))
+    tkn.transfer(COLLATERAL, msg.sender, staticcall COLLATERAL.balanceOf(self))
 
     log IZap.PartialRepay(
         controller=CONTROLLER,
         user=_user,
         borrowed_from_sender=borrowed_from_sender,
-        surplus_repaid=borrowed_amount,
-    )
-
-
-@internal
-def execute_callback(
-    callbacker: address,
-    callback_sig: bytes4,
-    calldata: Bytes[CALLDATA_MAX_SIZE - 32 * 5],
-):
-    response: Bytes[64] = raw_call(
-        callbacker,
-        concat(
-            callback_sig,
-            abi_encode(calldata),
-        ),
-        max_outsize=64,
+        surplus_repaid=surplus_repaid,
     )
 
 
@@ -215,15 +199,7 @@ def callback_liquidate(
     BORROWED: IERC20 = staticcall CONTROLLER.borrowed_token()
     COLLATERAL: IERC20 = staticcall CONTROLLER.collateral_token()
 
-    collateral_received: uint256 = staticcall COLLATERAL.balanceOf(self)
-    tkn.transfer(COLLATERAL, callbacker, collateral_received)
-
-    self.execute_callback(
-        callbacker,
-        CALLBACK_SIGNATURE,
-        callbacker_calldata
-    )
-
-    tkn.transfer_from(BORROWED, callbacker, self, borrowed_from_sender)
+    tkn.max_approve(COLLATERAL, callbacker)
+    raw_call(callbacker, callbacker_calldata, max_outsize=0)
 
     return [borrowed_from_sender, 0]
