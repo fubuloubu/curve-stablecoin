@@ -1492,12 +1492,6 @@ def set_callback(_cb: ILMGauge):
     log IController.SetLMCallback(callback=_cb)
 
 
-@internal
-@view
-def _admin_fees(_rate_mul: uint256) -> uint256:
-    return self._stored_admin_fees + self._preview_total_debt(_rate_mul, self._total_debt)[1]
-
-
 @external
 @view
 def admin_fees() -> uint256:
