@@ -29,7 +29,7 @@ FRAC: public(immutable(uint256))                         # fraction of position 
 HEALTH_THRESHOLD: public(immutable(int256))              # trigger threshold on controller.health(user, false)
 
 CALLDATA_MAX_SIZE: constant(uint256) = c.CALLDATA_MAX_SIZE
-CALLBACK_SIGNATURE: constant(bytes4) = method_id("callback_liquidate_partial(bytes)",output_type=bytes4,)
+CALLBACK_SIGNATURE: constant(bytes4) = method_id("callback_liquidate_partial(bytes)", output_type=bytes4)
 
 
 @deploy
@@ -66,11 +66,10 @@ def _get_controller(_c_idx: uint256) -> IController:
 
 @internal
 @view
-def _check_controller(_c_idx: uint256) -> IController:
+def _check_controller(_c_idx: uint256):
     contract_info: ILendFactory.ContractInfo = staticcall _LEND_FACTORY.check_contract(msg.sender)
     assert contract_info.contract_type == ILendFactory.ContractType.CONTROLLER, "wrong sender"
     assert contract_info.market_index == _c_idx, "wrong sender"
-    return IController(msg.sender)
 
 
 @internal
@@ -145,13 +144,13 @@ def _liquidate_partial(
     @param _callbacker Address of the exchange/router contract
     @param _calldata Calldata for the exchange/router contract call
     """
-    BORROWED: IERC20 = staticcall _controller.borrowed_token()
-    COLLATERAL: IERC20 = staticcall _controller.collateral_token()
+    borrowed: IERC20 = staticcall _controller.borrowed_token()
+    collateral: IERC20 = staticcall _controller.collateral_token()
 
     assert staticcall _controller.approval(_user, self), "not approved"
     assert staticcall _controller.health(_user, False) < HEALTH_THRESHOLD, "health too high"
 
-    tkn.max_approve(BORROWED, _controller.address)
+    tkn.max_approve(borrowed, _controller.address)
 
     total_debt: uint256 = staticcall _controller.debt(_user)
     initial_x: uint256 = (staticcall _controller.user_state(_user))[1]
@@ -165,11 +164,13 @@ def _liquidate_partial(
     borrowed_from_sender: uint256 = unsafe_div(unsafe_mul(to_repay, ratio), WAD)
 
     if _callbacker != empty(address):
+        tkn.max_approve(collateral, _callbacker)
+
         liquidate_calldata: Bytes[CALLDATA_MAX_SIZE] = abi_encode(_c_idx, borrowed_from_sender, _callbacker, _calldata)
         extcall _controller.liquidate(_user, _min_x, FRAC, self, liquidate_calldata)
 
     else:
-        tkn.transfer_from(BORROWED, msg.sender, self, borrowed_from_sender)
+        tkn.transfer_from(borrowed, msg.sender, self, borrowed_from_sender)
         extcall _controller.liquidate(_user, _min_x, FRAC)
 
     # to_repay is not accurate - can be different between view and actual
@@ -181,8 +182,8 @@ def _liquidate_partial(
     surplus_repaid: uint256 = borrowed_from_sender - paid_by_sender
     extcall _controller.repay(surplus_repaid, _user)
 
-    tkn.transfer(BORROWED, msg.sender, staticcall BORROWED.balanceOf(self))
-    tkn.transfer(COLLATERAL, msg.sender, staticcall COLLATERAL.balanceOf(self))
+    tkn.transfer(borrowed, msg.sender, staticcall borrowed.balanceOf(self))
+    tkn.transfer(collateral, msg.sender, staticcall collateral.balanceOf(self))
 
     log IZap.PartialRepay(
         controller=_controller,
@@ -230,11 +231,8 @@ def callback_liquidate(
 
     c_idx, borrowed_from_sender, callbacker, callbacker_calldata = abi_decode(_calldata, (uint256, uint256, address, Bytes[CALLDATA_MAX_SIZE - 32 * 5]))
 
-    CONTROLLER: IController = self._check_controller(c_idx)
-    BORROWED: IERC20 = staticcall CONTROLLER.borrowed_token()
-    COLLATERAL: IERC20 = staticcall CONTROLLER.collateral_token()
+    self._check_controller(c_idx)
 
-    tkn.max_approve(COLLATERAL, callbacker)
     raw_call(callbacker, callbacker_calldata, max_outsize=0)
 
     return [borrowed_from_sender, 0]

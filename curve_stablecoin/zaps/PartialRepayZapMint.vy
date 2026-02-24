@@ -65,10 +65,9 @@ def _get_controller(_c_idx: uint256) -> IController:
 
 @internal
 @view
-def _check_controller(_c_idx: uint256) -> IController:
+def _check_controller(_c_idx: uint256):
     controller: IController = self._get_controller(_c_idx)
     assert msg.sender == controller.address, "wrong sender"
-    return controller
 
 
 @external
@@ -139,11 +138,8 @@ def callback_liquidate(
 
     c_idx, borrowed_from_sender, callbacker, callbacker_calldata = abi_decode(_calldata, (uint256, uint256, address, Bytes[core.CALLDATA_MAX_SIZE - 32 * 5]))
 
-    CONTROLLER: IController = self._check_controller(c_idx)
-    BORROWED: IERC20 = staticcall CONTROLLER.borrowed_token()
-    COLLATERAL: IERC20 = staticcall CONTROLLER.collateral_token()
+    self._check_controller(c_idx)
 
-    tkn.max_approve(COLLATERAL, callbacker)
     raw_call(callbacker, callbacker_calldata, max_outsize=0)
 
     return [borrowed_from_sender, 0]
