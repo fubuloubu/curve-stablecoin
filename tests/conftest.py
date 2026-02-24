@@ -44,6 +44,11 @@ def admin(proto):
 
 
 @pytest.fixture(scope="module")
+def mint_factory(proto):
+    return proto.mint_factory
+
+
+@pytest.fixture(scope="module")
 def factory(proto):
     return proto.lending_factory
 
